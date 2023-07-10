@@ -70,7 +70,7 @@ dat_file <- read.csv("C:/Users/lindseybell/Documents/R Projects/SRM Footprint/AM
 
 meas_h <- 7.82
 d <- (2/3) * meas_h
-#bound_h <- 1000
+bound_h <- 1000
 
 dat_file$TIMESTAMP_START <- ymd_hm(as.character(dat_file$TIMESTAMP_START))
 
