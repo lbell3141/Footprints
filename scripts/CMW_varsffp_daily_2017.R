@@ -30,7 +30,7 @@ dat_ffp <- dat_file %>%
     sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
     u_star = USTAR,
     wind_dir = WD_1_1_1,
-    test = zm/L
+    test = zm/L,
   ) %>%
   filter(test >= -15.5)%>%
   filter(u_star > 0.1)%>%
@@ -55,7 +55,7 @@ ffp_vars = c("wind_sp", "L", "u_star", "wind_dir")
 #ffp_vars = c(daily_means$wind_sp, daily_means$L, daily_means$u_star, daily_means$wind_dir)
 
 plots = lapply(ffp_vars, function(vars){
-  plot(daily_means$doy, daily_means[[vars]],
+  plot(daily_means_ffp$doy, daily_means_ffp[[vars]],
        main = vars,
        xlab = "day",
        ylab = "var",
@@ -94,16 +94,17 @@ dat_flux <- dat_file %>%
     nee = NEE_PI,
     reco = RECO_PI,
     le = LE,
-    ppfd = PPFD_IN_PI_F
+    ppfd = PPFD_IN_PI_F,
+    precip = P
   ) %>%
   filter(test >= -15.5)%>%
   filter(u_star > 0.1)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, gpp, nee, reco, le, ppfd)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, gpp, nee, reco, le, ppfd, precip)%>%
   filter(across(everything(), ~ . != "NA"))%>%
   #filter(HH_UTC %in% c(0:6, 20:24))%>%
   filter(yyyy == 2017)
 
-flux_cols = c("gpp", "nee", "reco", "le", "ppfd")
+flux_cols = c("gpp", "nee", "reco", "le", "ppfd", "precip")
 daily_means_flux = dat_flux%>%
   group_by(mm, doy)%>%
   summarize(across(all_of(flux_cols), mean, na.rm = TRUE))%>%
@@ -111,7 +112,7 @@ daily_means_flux = dat_flux%>%
 
 par(mfrow = c(2,3))
 plots = lapply(flux_cols, function(vars){
-  plot(daily_means$doy, daily_means[[vars]],
+  plot(daily_means_flux$doy, daily_means_flux[[vars]],
        main = vars,
        xlab = "day",
        ylab = "var",
@@ -149,16 +150,17 @@ dat_voi <- dat_file %>%
     nee = NEE_PI,
     reco = RECO_PI,
     le = LE,
-    ppfd = PPFD_IN_PI_F
+    ppfd = PPFD_IN_PI_F,
+    precip = P
   ) %>%
   filter(test >= -15.5)%>%
   filter(u_star > 0.1)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip)%>%
   filter(across(everything(), ~ . != "NA"))%>%
   #filter(HH_UTC %in% c(0:6, 20:24))%>%
   filter(yyyy == 2017)
 
-var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd")
+var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd", "precip")
 daily_means_voi = dat_voi%>%
   mutate(d_ten = ceiling(doy / 10)) %>%
   group_by(d_ten)%>%
@@ -178,7 +180,7 @@ plots = lapply(var_cols, function(vars){
 
 #----------------------------------------------
 #monthly averages
-var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd")
+var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd", "precip")
 daily_means_voi = dat_voi%>%
   group_by(mm)%>%
   summarize(across(all_of(var_cols), mean, na.rm = TRUE)) #%>%
@@ -198,7 +200,7 @@ plots = lapply(var_cols, function(vars){
 #--------------------------------------------------------------
 #seasonal daily averages for each season
 
-var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd")
+var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd", "precip")
 daily_means_voi = dat_voi%>%
   group_by(doy)%>%
   summarize(across(all_of(var_cols), mean, na.rm = TRUE)) #%>%
@@ -252,7 +254,7 @@ plots = lapply(var_cols, function(vars){
 #-------------------------------------------------------------
 #seasonal by 5 day averages 
 
-var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd")
+var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd", "precip")
 daily_means_voi = dat_voi%>%
   mutate(d_five = ceiling(doy / 5)) %>%
   group_by(d_five)%>%
@@ -271,16 +273,96 @@ plots = lapply(var_cols, function(vars){
   )
 })
 
+#---------------------------------------------------
+#looking at two months (July, August)
+
+var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd", "precip")
+daily_means_voi = dat_voi%>%
+  group_by(doy)%>%
+  summarize(across(all_of(var_cols), mean, na.rm = TRUE))%>%
+  filter(doy >= 100 & doy <= 300)
 
 
 
+par(mfrow = c(4,3))
+plots = lapply(var_cols, function(vars){
+  plot(daily_means_voi$doy, daily_means_voi[[vars]],
+       main = vars,
+       xlab = "day",
+       ylab = "var",
+       type = 'l',
+       #lwd = 1
+  )
+})
+
+#anomalies for WS, WD, and GPP
+anom_var = c("wind_sp", "wind_dir", "gpp")
+
+mean_anom_var = 
+
+
+  var_cols = c("wind_sp", "wind_dir","gpp")
+daily_means_voi = dat_voi%>%
+  group_by(doy)%>%
+  summarize(across(all_of(var_cols), mean, na.rm = TRUE))%>%
+  filter(doy >= 182 & doy <= 243)
 
 
 
+par(mfrow = c(3,1))
+plots = lapply(var_cols, function(vars){
+  plot(daily_means_voi$doy, daily_means_voi[[vars]],
+       main = vars,
+       xlab = "day",
+       ylab = "var",
+       type = 'l',
+       #lwd = 1
+  )
+})
 
+par(mfrow = c(1,1))
+plot(daily_means_voi$L, daily_means_voi$temp_atmos)
 
+#---------------------------------------
+dat_voi <- dat_file %>%
+  mutate(
+    yyyy = year(TIMESTAMP_START),
+    mm = month(TIMESTAMP_START),
+    doy = yday(TIMESTAMP_START),
+    day = day(TIMESTAMP_START),
+    HH_UTC = hour(TIMESTAMP_START),
+    MM = minute(TIMESTAMP_START),
+    zm = meas_h,
+    d = d, 
+    u_mean = mean(WS_1_1_1, na.rm = TRUE),
+    wind_sp = WS_1_1_1,
+    L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
+    H = H,
+    temp_atmos = TA_1_1_1,
+    sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
+    u_star = USTAR,
+    wind_dir = WD_1_1_1,
+    test = zm/L,
+    #adding associated fluxes
+    gpp = GPP_PI,
+    nee = NEE_PI,
+    reco = RECO_PI,
+    le = LE,
+    ppfd = PPFD_IN_PI_F,
+    precip = P
+  ) %>%
+  filter(test >= -15.5)%>%
+  filter(u_star > 0.1)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip)%>%
+  filter(across(everything(), ~ . != "NA"))%>%
+  filter(HH_UTC %in% 6:20)%>%
+  filter(mm %in% 5:9)%>%
+  filter(yyyy %in% 2013:2017)
 
-
-
-
-
+var_cols = c("wind_sp", "L", "u_star", "wind_dir", "temp_atmos", "H","gpp", "nee", "reco", "le", "ppfd", "precip")
+daily_means_voi = dat_voi%>%
+  group_by(doy)%>%
+  summarize(across(all_of(var_cols), mean, na.rm = TRUE)) #%>%
+plot(daily_means_voi$wind_dir, daily_means_voi$gpp)
+cor(daily_means_voi$wind_dir, daily_means_voi$gpp, method = "pearson")
+abline(lm(daily_means_voi$gpp ~ daily_means_voi$wind_dir))
