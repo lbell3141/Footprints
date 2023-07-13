@@ -39,11 +39,12 @@ dat_voi = dat_file %>%
     reco = RECO_PI,
     le = LE,
     ppfd = PPFD_IN_PI_F,
-    precip = P
+    precip = P,
+    swc = SWC_PI_1_1_A
   ) %>%
   filter(test >= -15.5)%>%
   filter(u_star > 0.1)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, swc)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   filter(HH_UTC %in% 8:17)
 
@@ -54,6 +55,7 @@ hist(dat_voi$ppfd) #1000:1500
 hist(dat_voi$wind_sp) #0.5:2
 hist(dat_voi$wind_dir) #150, 250, 350
 hist(dat_voi$precip) #0
+hist(dat_voi$swc)
 
 #---------------------------------------------------------------------------------
 #make full data frame
@@ -214,4 +216,64 @@ ggplot() +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
   theme_minimal()
 
+#--------------------------------------------------------------------------------
+dat_180 = dat_voi %>%
+  filter(doy == 219)%>%
+  filter(yyyy == 2002)
+plot(dat_180$HH_UTC, dat_180$gpp)
 
+
+
+dat_voi = dat_file %>%
+  mutate(
+    yyyy = year(TIMESTAMP_START),
+    mm = month(TIMESTAMP_START),
+    doy = yday(TIMESTAMP_START),
+    day = day(TIMESTAMP_START),
+    HH_UTC = hour(TIMESTAMP_START),
+    MM = minute(TIMESTAMP_START),
+    #flux variables and params
+    zm = meas_h,
+    d = d, 
+    u_mean = mean(WS_1_1_1, na.rm = TRUE),
+    wind_sp = WS_1_1_1,
+    L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
+    H = H,
+    temp_atmos = TA_1_1_1,
+    sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
+    u_star = USTAR,
+    wind_dir = WD_1_1_1,
+    test = zm/L,
+    #adding key drivers and fluxes
+    gpp = GPP_PI,
+    nee = NEE_PI,
+    reco = RECO_PI,
+    le = LE,
+    ppfd = PPFD_IN_PI_F,
+    precip = P,
+    rel_h = RH_1_1_1,
+    swc = SWC_PI_1_1_A
+  ) %>%
+  #filter data to work with ffp code/online calculator 
+  filter(test >= -15.5)%>%
+  filter(u_star > 0.1)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
+  filter(if_any(everything(), ~ . != "NA"))%>%
+  #filter for high frequency values during the day
+  filter(HH_UTC %in% 11:13)%>%
+  filter(lag(precip) == 0, lead(precip) == 0)%>%
+  filter(precip == 0)%>%
+  filter(ppfd %in% 600:1800)%>%  
+  filter(temp_atmos >= 15 & temp_atmos <= 35)%>%
+  filter(wind_sp >= 0.5 & wind_sp <= 2.5)%>%
+  filter(swc >= 4)
+
+#subset main data into frames with opposite WD (here, NW ad SE directions)
+dat_voi_A <- dat_voi%>%
+  filter(wind_dir %in% 270:350)
+dat_voi_B <- dat_voi%>%
+  filter(wind_dir %in% 90:170)
+
+par(mfrow = c(1, 2))
+hist(dat_voi_A$HH_UTC)
+hist(dat_voi_B$HH_UTC)
