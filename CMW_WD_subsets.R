@@ -6,6 +6,7 @@
 library(lubridate)
 library(dplyr)
 library(ggplot2)
+library(zoo)
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 meas_h <- 14
 d <- (2/3) * meas_h
@@ -106,9 +107,111 @@ dat_voi_A <- dat_voi%>%
 dat_voi_B <- dat_voi%>%
   filter(wind_dir %in% 90:170)
 
-plot(dat_voi_A$doy, dat_voi_A$gpp, col = "red")
-points(dat_voi_B$doy, dat_voi_B$gpp, col = "blue")
-legend("topright", legend = c("Southeastern WD", "Northwestern WD"), col = c("red", "blue"), pch = 16)
+par(mfrow = c(2,2))
+plot(dat_voi_A$doy, dat_voi_A$gpp, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$gpp, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+plot(dat_voi_A$doy, dat_voi_A$reco, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$reco, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+plot(dat_voi_A$doy, dat_voi_A$le, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$le, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+plot(dat_voi_A$doy, dat_voi_A$nee, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$nee, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
 
 #--------------------------------------------------------------------------------
+#plotting drivers and gpp 
+drv_var <- c("wind_sp", "ppfd", "temp_atmos", "rel_h", "swc")
+
+par(mfrow = c( 2, 3))
+plots = lapply(drv_var, function(vars){
+  plot(dat_voi_A[[vars]], dat_voi_A$gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp",
+       #lwd = 1
+  )
+cor(dat_voi_A[[vars]], dat_voi_A$gpp, method = "pearson")
+abline(lm(dat_voi_A$gpp ~dat_voi_A[[vars]]))
+})
+
+par(mfrow = c( 2, 3))
+plots = lapply(drv_var, function(vars){
+  plot(dat_voi_B[[vars]], dat_voi_B$gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp",
+       #lwd = 1
+  )
+  cor(dat_voi_A[[vars]], dat_voi_A$gpp, method = "pearson")
+  abline(lm(dat_voi_A$gpp ~dat_voi_A[[vars]]))
+  })
+
+#overlaying graphs for dat_voi_A and dat_voi_B
+
+par(mfrow = c(2, 3))
+for (vars in drv_var) {
+  plot(dat_voi_A[[vars]], dat_voi_A$gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp"
+  )
+  points(dat_voi_A[[vars]], dat_voi_A$gpp, col = "blue")
+  abline(lm(dat_voi_A$gpp ~ dat_voi_A[[vars]]), col = "blue")
+  
+  points(dat_voi_B[[vars]], dat_voi_B$gpp, col = "red")  
+  abline(lm(dat_voi_B$gpp ~ dat_voi_B[[vars]]), col = "red")
+  
+  legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
+ }
+
+#--------------------------------------------------------------------------------
+#subsetting data to only winter/early spring
+dat_voi_A_win = dat_voi_A %>%
+  filter(doy %in% c(0:100, 310:366))%>%
+  filter(temp_atmos > 18)
+dat_voi_B_win = dat_voi_B %>% 
+  filter(doy %in% c(0:100, 310:366))%>%
+  filter(temp_atmos > 18)
+
+dat_B_selected <- dat_voi_B %>% sample_n(80)
+
+
+par(mfrow = c(2, 3))
+for (vars in drv_var) {
+  plot(dat_voi_A_win[[vars]], dat_voi_A_win$gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp"
+  )
+  points(dat_voi_A_win[[vars]], dat_voi_A_win$gpp, col = "blue")
+  abline(lm(dat_voi_A_win$gpp ~ dat_voi_A_win[[vars]]), col = "blue")
+  
+  points(dat_B_selected[[vars]], dat_B_selected$gpp, col = "red")  
+  abline(lm(dat_B_selected$gpp ~ dat_B_selected[[vars]]), col = "red")
+  
+  legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
+}
+
+#--------------------------------------------------------------------------------
+#moving average 
+par(mfrow = c(1,1))
+dat_A_arr = dat_voi_A %>% arrange(doy)
+dat_B_arr = dat_voi_B %>% arrange(doy)
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$gpp, k = 20, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$gpp, k = 20, fill = NA)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  labs(title = "Moving Avg", x = "DOY", y = "GPP", color = "Data Source") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  theme_minimal()
+
 
