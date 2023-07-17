@@ -125,4 +125,4 @@ dat_ffp$u_star = as.numeric(dat_ffp$u_star)
 dat_ffp$wind_dir = as.numeric(dat_ffp$wind_dir)
 
 write.csv(dat_ffp, "CMW_dt.csv", row.names = FALSE)
-
+ 

@@ -3,7 +3,7 @@
 
 library(lubridate)
 library(dplyr)
-
+#-----------------------------------------------------------------------------------
 #LS1
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-LS1_BASE_HH_1-5.csv", na.strings = c("-9999", "-9999.00000", "-9999.000"), header = TRUE, sep = ",", skip = 2)
 

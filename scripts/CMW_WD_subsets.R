@@ -47,7 +47,7 @@ dat_voi = dat_file %>%
   filter(u_star > 0.1)%>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
-  filter(HH_UTC %in% 8:17)
+  filter(HH_UTC >= 8 & HH_UTC <= 17)
 
 
 par(mfrow = c(1, 1))
@@ -97,18 +97,21 @@ dat_voi = dat_file %>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
-  filter(HH_UTC %in% 8:17)%>%
+  filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
   filter(precip == 0)%>%
-  filter(ppfd %in% 600:1800)%>%  
-  filter(temp_atmos >= 15 & temp_atmos <= 35)%>%
+  filter(ppfd >= 600 & ppfd <= 1800)%>%  
+  filter(temp_atmos >= 15 & temp_atmos <= 25)%>%
   filter(wind_sp >= 0.5 & wind_sp <= 2.5) 
 
 #subset main data into frames with opposite WD (here, NW ad SE directions)
 dat_voi_A <- dat_voi%>%
-  filter(wind_dir %in% 270:350)
+  filter(wind_dir >= 270 & wind_dir <= 350)%>%
+  sample_n(1000)
 dat_voi_B <- dat_voi%>%
-  filter(wind_dir %in% 90:170)
+  filter(wind_dir >= 90 & wind_dir <= 170)%>%
+  sample_n(1000)
+
 
 par(mfrow = c(2,2))
 plot(dat_voi_A$doy, dat_voi_A$gpp, col = "blue")
@@ -314,18 +317,16 @@ dat_voi = dat_file %>%
   filter(HH_UTC %in% 12:14)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
   filter(precip == 0)%>%
-  filter(ppfd %in% 1000:1400)%>%  
+  filter(ppfd >= 1000 & ppfd <= 1400)%>%  
   filter(temp_atmos >= 15 & temp_atmos <= 30)%>%
   filter(wind_sp >= 1 & wind_sp <= 5)%>%
   filter(swc >= 4)
 
 #subset main data into frames with opposite WD (here, NW ad SE directions)
 dat_voi_A <- dat_voi%>%
-  filter(wind_dir %in% 270:350)%>%
-  sample_n(42)
+  filter(wind_dir >= 270 & wind_dir <= 350)
 dat_voi_B <- dat_voi%>%
-  filter(wind_dir %in% 90:170)%>%
-  sample_n(42)
+  filter(wind_dir >= 90 & wind_dir <= 170)
 
 
 par(mfrow = c(1, 2))
