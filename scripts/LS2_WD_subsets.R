@@ -6,6 +6,7 @@ library(dplyr)
 library(ggplot2)
 library(zoo)
 library(plantecophys)
+library(gridExtra)
 
 #LS2
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-LS2_BASE_HH_1-5.csv", na.strings = c("-9999", "-9999.00000", "-9999.000"), header = TRUE, sep = ",", skip = 2)
@@ -122,7 +123,7 @@ dat_voi = dat_file %>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
-  filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
+  filter(HH_UTC >= 8 & HH_UTC <= 18)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
   filter(precip == 0)%>%
   filter(ppfd > 1000 & ppfd < 1500)%>%  
@@ -190,8 +191,8 @@ dat_B_arr = dat_voi_B %>%
   group_by(doy)%>%
   summarize(across(all_of(col_var), mean, na.rm = TRUE, .names = "mn_{.col}"))
 
-dat_A_arr$movavg_A = rollmean(dat_A_arr$mn_gpp, k = 20, fill = NA)
-dat_B_arr$movavg_B = rollmean(dat_B_arr$mn_gpp, k = 20, fill = NA)
+dat_A_arr$movavg_A = rollmean(dat_A_arr$mn_gpp, k = 10, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$mn_gpp, k = 10, fill = NA)
 
 ggplot() +
   geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
@@ -256,5 +257,37 @@ for (vars in vsoi) {
   
   legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
 }
+
+#===============================================================================
+#splitting into 8 directions
+deg_int <- seq(0, 360, by = 45)
+split_dat <- split(dat_voi, cut(dat_voi$wind_dir, deg_int, include.lowest = TRUE, labels = FALSE))
+dat_frames <- c("dat_A", "dat_B", "dat_C", "dat_D", "dat_E", "dat_F", "dat_G", "dat_H")
+
+for (i in seq_along(dat_frames)) {
+  assign(dat_frames[i], split_dat[[i]])
+}
+dat_frames <- lapply(c("dat_A", "dat_B", "dat_C", "dat_D", "dat_E", "dat_F", "dat_G", "dat_H"), function(x) get(x))
+c_var <- c("gpp", "reco", "nee")
+r_var <- c("temp_atmos", "rel_h", "VPD", "swc", "ppfd", "wind_sp")
+plots <- list()
+
+for (var in c_var){
+  p <- ggplot() +
+    labs(x = "DOY", y = var, color = "Data Frame")
+  
+  for (i in 1:8){
+    df <- dat_frames[[i]]
+    df_name <- i
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_line(data = df, aes_string(x = "doy", y = var, color = "df_name"))
+  }
+  plots[[var]] <- p
+}
+
+grid.arrange(grobs = plots, ncol = 3)
+
+
 
 
