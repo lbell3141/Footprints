@@ -288,6 +288,20 @@ for (var in c_var){
 
 grid.arrange(grobs = plots, ncol = 3)
 
+#for r_var plots
+for (var in r_var){
+  p <- ggplot() +
+    labs(x = var, y = "GPP" , color = "Data Frame")
+  
+  for (i in 1:8){
+    df <- dat_frames[[i]]
+    df_name <- i
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_point(data = df, aes_string(x = var, y = "gpp", color = "df_name"))
+  }
+  plots[[var]] <- p
+}
 
-
+grid.arrange(grobs = plots, ncol = 3)
 
