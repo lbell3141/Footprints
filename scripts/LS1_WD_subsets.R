@@ -1,7 +1,11 @@
 #LS1 WD comparison 
 
+#loading data and libraries; defining variables
 library(lubridate)
 library(dplyr)
+library(ggplot2)
+library(zoo)
+library(plantecophys)
 
 #LS1
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-LS1_BASE_HH_1-5.csv", na.strings = c("-9999", "-9999.00000", "-9999.000"), header = TRUE, sep = ",", skip = 2)
@@ -11,6 +15,11 @@ d <- (2/3) * meas_h
 #bound_h <- 1000
 
 dat_file$TIMESTAMP_START <- ymd_hm(as.character(dat_file$TIMESTAMP_START))
+#--------------------------------------------------------------------------------
+#use library plantecophys to calc VPD
+
+dat_file$VPD = RHtoVPD(dat_file$RH_1_1_1, dat_file$TA_1_1_1, dat_file$PA)
+
 #-------------------------------------------------------------------------------
 #histograms
 
@@ -43,25 +52,27 @@ dat_voi = dat_file %>%
     ppfd = PPFD_IN,
     precip = P,
     rel_h = RH_1_1_1,
-    swc = SWC_PI_1_1_A
+    swc = SWC_PI_1_1_A,
+    VPD = VPD
   ) %>%
   #filter data to work with ffp code/online calculator 
   filter(test >= -15.5)%>%
   filter(u_star > 0.1)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
   filter(HH_UTC %in% 8:17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
-  filter(precip == 0)
+  filter(precip == 0)%>%
+  filter(swc >= 0)
 
 par(mfrow = c(3,2))
-hist(dat_voi$temp_atmos) #20:30
+hist(dat_voi$temp_atmos) #25:30
 hist(dat_voi$ppfd) #1000:1500
 hist(dat_voi$wind_sp) #0.5:2
-hist(dat_voi$wind_dir) #150, 250, 350
+hist(dat_voi$wind_dir) #175, 325
 hist(dat_voi$precip) #0
-hist(dat_voi$swc)
+hist(dat_voi$swc) #0:15
 
 
 #-------------------------------------------------------------------------------
@@ -94,20 +105,24 @@ dat_voi = dat_file %>%
     ppfd = PPFD_IN,
     precip = P,
     rel_h = RH_1_1_1,
-    swc = SWC_PI_1_1_A
+    swc = SWC_PI_1_1_A,
+    VPD = VPD
   ) %>%
   #filter data to work with ffp code/online calculator 
   filter(test >= -15.5)%>%
   filter(u_star > 0.1)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
+  filter(le > -9999)%>%
+  filter(swc > -9999)%>%
+  filter(rel_h > -9999)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
   filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
   filter(precip == 0)%>%
-  filter(ppfd > 600 & ppfd < 1800)%>%  
-  filter(temp_atmos >= 15 & temp_atmos <= 35)%>%
-  filter(wind_sp >= 0.5 & wind_sp <= 2.5) 
+  filter(ppfd > 1000 & ppfd < 1500)%>%  
+  filter(temp_atmos >= 20 & temp_atmos <= 30)%>%
+  filter(wind_sp >= 0.5 & wind_sp <= 2) 
 
 #subset main data into frames with opposite WD (here, NW ad SE directions)
 dat_voi_A <- dat_voi%>%
@@ -131,3 +146,108 @@ legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("bl
 plot(dat_voi_A$doy, dat_voi_A$nee, col = "blue")
 points(dat_voi_B$doy, dat_voi_B$nee, col = "red")
 legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+#plotting drivers and gpp 
+#overlaying graphs for dat_voi_A and dat_voi_B
+drv_var <- c("wind_sp", "ppfd", "temp_atmos", "rel_h", "swc", "VPD")
+
+par(mfrow = c(2, 3))
+for (vars in drv_var) {
+  plot(dat_voi_A[[vars]], dat_voi_A$gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp"
+  )
+  points(dat_voi_A[[vars]], dat_voi_A$gpp, col = "blue")
+  abline(lm(dat_voi_A$gpp ~ dat_voi_A[[vars]]), col = "blue")
+  
+  points(dat_voi_B[[vars]], dat_voi_B$gpp, col = "red")  
+  abline(lm(dat_voi_B$gpp ~ dat_voi_B[[vars]]), col = "red")
+  
+  legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
+}
+#--------------------------------------------------------------------------------
+#moving average GPP
+par(mfrow = c(1,1))
+dat_A_arr = dat_voi_A %>% arrange(doy)
+dat_B_arr = dat_voi_B %>% arrange(doy)
+
+
+col_var = c("gpp", "nee", "reco","wind_sp", "ppfd", "temp_atmos", "rel_h", "swc", "VPD")
+
+dat_A_arr = dat_voi_A %>% 
+  arrange(doy)%>%
+  group_by(doy)%>%
+  summarize(across(all_of(col_var), mean, na.rm = TRUE, .names = "mn_{.col}"))
+
+dat_B_arr = dat_voi_B %>% 
+  arrange(doy)%>%
+  group_by(doy)%>%
+  summarize(across(all_of(col_var), mean, na.rm = TRUE, .names = "mn_{.col}"))
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$mn_gpp, k = 20, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$mn_gpp, k = 20, fill = NA)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  labs(title = "Moving Avg", x = "DOY", y = "GPP", color = "Data") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  theme_minimal()
+
+#MA NEE
+par(mfrow = c(1,1))
+dat_A_arr = dat_voi_A %>% arrange(doy)
+dat_B_arr = dat_voi_B %>% arrange(doy)
+
+
+col_var = c("gpp", "nee", "reco","wind_sp", "ppfd", "temp_atmos", "rel_h", "swc", "VPD")
+
+dat_A_arr = dat_voi_A %>% 
+  arrange(doy)%>%
+  group_by(doy)%>%
+  summarize(across(all_of(col_var), mean, na.rm = TRUE, .names = "mn_{.col}"))
+
+dat_B_arr = dat_voi_B %>% 
+  arrange(doy)%>%
+  group_by(doy)%>%
+  summarize(across(all_of(col_var), mean, na.rm = TRUE, .names = "mn_{.col}"))
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$mn_nee, k = 20, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$mn_nee, k = 20, fill = NA)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  labs(title = "Moving Avg", x = "DOY", y = "NEE", color = "Data") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  theme_minimal()
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$mn_reco, k = 20, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$mn_reco, k = 20, fill = NA)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  labs(title = "Moving Avg", x = "DOY", y = "RECO", color = "Data") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  theme_minimal()
+
+vsoi = c("mn_wind_sp", "mn_ppfd", "mn_temp_atmos", "mn_rel_h", "mn_swc", "mn_VPD")
+dat_voi_A = dat_A_arr
+dat_voi_B = dat_B_arr
+par(mfrow = c(2, 3))
+for (vars in vsoi) {
+  plot(dat_voi_A[[vars]], dat_voi_A$mn_gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp"
+  )
+  points(dat_voi_A[[vars]], dat_voi_A$mn_gpp, col = "blue")
+  abline(lm(dat_voi_A$mn_gpp ~ dat_voi_A[[vars]]), col = "blue")
+  
+  points(dat_voi_B[[vars]], dat_voi_B$mn_gpp, col = "red")  
+  abline(lm(dat_voi_B$mn_gpp ~ dat_voi_B[[vars]]), col = "red")
+  
+  legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
+}

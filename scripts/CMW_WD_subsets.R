@@ -405,12 +405,13 @@ dat_voi = dat_file %>%
     ppfd = PPFD_IN_PI_F,
     precip = P,
     rel_h = RH_1_1_1,
-    swc = SWC_PI_1_1_A
+    swc = SWC_PI_1_1_A,
+    VPD = VPD
   ) %>%
   #filter data to work with ffp code/online calculator 
   filter(test >= -15.5)%>%
   filter(u_star > 0.1)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
   #filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
@@ -485,6 +486,19 @@ ggplot() +
   labs(title = "Moving Avg", x = "DOY", y = "NEE", color = "Data") +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
   theme_minimal()
+
+#MA RECO
+dat_A_arr$movavg_A = rollmean(dat_A_arr$mn_reco, k = 20, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$mn_reco, k = 20, fill = NA)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  labs(title = "Moving Avg", x = "DOY", y = "RECO", color = "Data") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  theme_minimal()
+
+
 
 vsoi = c("mn_wind_sp", "mn_ppfd", "mn_temp_atmos", "mn_rel_h", "mn_swc", "mn_VPD")
 dat_voi_A = dat_A_arr
