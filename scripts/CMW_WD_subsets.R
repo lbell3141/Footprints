@@ -8,6 +8,8 @@ library(dplyr)
 library(ggplot2)
 library(zoo)
 library(plantecophys)
+devtools::install_github("cardiomoon/ggiraphExtra")
+
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 meas_h <- 14
 d <- (2/3) * meas_h
@@ -160,12 +162,18 @@ for (vars in drv_var) {
 
 #--------------------------------------------------------------------------------
 #subsetting data to only winter/early spring; equal amount of points in both dfs
-dat_voi_A_win = dat_voi_A %>%
-  filter(doy %in% c(0:100, 310:366))
-dat_voi_B_win = dat_voi_B %>% 
-  filter(doy %in% c(0:100, 310:366))
+dat_voi_A <- dat_voi%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)
+dat_voi_B <- dat_voi%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)
 
-dat_B_selected <- dat_voi_B %>% sample_n(467)
+
+dat_voi_A_win = dat_voi_A %>%
+  filter(doy %in% c(0:100, 340:366))
+dat_voi_B_win = dat_voi_B %>% 
+  filter(doy %in% c(0:100, 340:366))
+
+#dat_B_selected <- dat_voi_B %>% sample_n(829)
 
 
 par(mfrow = c(2, 3))
@@ -178,8 +186,8 @@ for (vars in drv_var) {
   points(dat_voi_A_win[[vars]], dat_voi_A_win$gpp, col = "blue")
   abline(lm(dat_voi_A_win$gpp ~ dat_voi_A_win[[vars]]), col = "blue")
   
-  points(dat_B_selected[[vars]], dat_B_selected$gpp, col = "red")  
-  abline(lm(dat_B_selected$gpp ~ dat_B_selected[[vars]]), col = "red")
+  points(dat_voi_B_win[[vars]], dat_voi_B_win$gpp, col = "red")  
+  abline(lm(dat_voi_B_win$gpp ~ dat_voi_B_win[[vars]]), col = "red")
   
   legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
 }
@@ -564,5 +572,113 @@ for (var in r_var){
 }
 
 grid.arrange(grobs = plots, ncol = 3)
+
+#===============================================================================
+#multiple regression
+dat_voi = dat_file %>%
+  mutate(
+    yyyy = year(TIMESTAMP_START),
+    mm = month(TIMESTAMP_START),
+    doy = yday(TIMESTAMP_START),
+    day = day(TIMESTAMP_START),
+    HH_UTC = hour(TIMESTAMP_START),
+    MM = minute(TIMESTAMP_START),
+    zm = meas_h,
+    d = d, 
+    u_mean = mean(WS_1_1_1, na.rm = TRUE),
+    wind_sp = WS_1_1_1,
+    L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
+    H = H,
+    temp_atmos = TA_1_1_1,
+    sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
+    u_star = USTAR,
+    wind_dir = WD_1_1_1,
+    test = zm/L,
+    #adding associated fluxes
+    gpp = GPP_PI,
+    nee = NEE_PI,
+    reco = RECO_PI,
+    le = LE,
+    ppfd = PPFD_IN_PI_F,
+    precip = P,
+    rel_h = RH_1_1_1,
+    swc = SWC_PI_1_1_A,
+    VPD = VPD
+  ) %>%
+  filter(test >= -15.5)%>%
+  filter(u_star > 0.1)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
+  filter(if_any(everything(), ~ . != "NA"))%>%
+  #filter for high frequency values during the day
+  filter(HH_UTC >= 11 & HH_UTC <= 14)%>%
+  filter(lag(precip) == 0, lead(precip) == 0)%>%
+  filter(precip == 0)%>%
+  filter(ppfd >= 1000 & ppfd <= 1600)%>%  
+  filter(temp_atmos >= 15 & temp_atmos <= 25)%>%
+  filter(wind_sp >= 0.5 & wind_sp <= 2.5) 
+
+#subset main data into frames with opposite WD (here, NW ad SE directions)
+dat_voi_A <- dat_voi%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)%>%
+  sample_n(1000)
+dat_voi_B <- dat_voi%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)%>%
+  sample_n(1000)
+
+
+
+plot(dat_voi_A[[vars]], dat_voi_A$gpp,
+     main = vars,
+     xlab = "var",
+     ylab = "gpp"
+)
+points(dat_voi_A, dat_voi_A$gpp, col = "blue")
+abline(lm(dat_voi_A$gpp ~ dat_voi_A$wind_sp + dat_voi_A$rel_h), col = "blue")
+
+points(dat_voi_B[[vars]], dat_voi_B$gpp, col = "red")  
+abline(lm(dat_voi_B$gpp ~ dat_voi_B[[vars]]), col = "red")
+
+
+
+par(mfrow = c(2, 3))
+for (vars in drv_var) {
+  plot(dat_voi_A[[vars]], dat_voi_A$gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp"
+  )
+  points(dat_voi_A[[vars]], dat_voi_A$gpp, col = "blue")
+  abline(lm(dat_voi_A$gpp ~ dat_voi_A[[vars]]), col = "blue")
+  
+  points(dat_voi_B[[vars]], dat_voi_B$gpp, col = "red")  
+  abline(lm(dat_voi_B$gpp ~ dat_voi_B[[vars]]), col = "red")
+  
+  legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
+}
+
+#--------------------
+model <- lm(gpp ~ wind_sp + rel_h, data = dat_voi_A, na.action = na.exclude)
+
+dat_voi_A$predicted_gpp <- predict(model)
+
+ggplot(dat_voi_A, aes(x = gpp)) +
+  geom_point(aes(y = predicted_gpp, color = "Predicted"), alpha = 0.5) +
+  geom_point(aes(y = gpp, color = "Actual"), alpha = 0.5) +
+  geom_abline(intercept = coef(model)[1], slope = coef(model)[2], color = "red", linetype = "dashed") +
+  geom_abline(intercept = coef(model)[1], slope = coef(model)[3], color = "blue", linetype = "dashed") +
+  labs(title = "Multiple Linear Regression",
+       x = "Actual GPP",
+       y = "Predicted GPP",
+       color = "Data Source") +
+  theme_minimal()
+
+
+
+
+
+
+
+
+
 
 
