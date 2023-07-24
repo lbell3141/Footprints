@@ -281,7 +281,7 @@ for (var in c_var){
     df_name <- i
     df$df_name <- factor(df_name)
     
-    p <- p + geom_line(data = df, aes_string(x = "doy", y = var, color = "df_name"))
+    p <- p + geom_point(data = df, aes_string(x = "doy", y = var, color = "df_name"))
   }
   plots[[var]] <- p
 }

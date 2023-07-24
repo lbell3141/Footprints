@@ -518,4 +518,51 @@ for (vars in vsoi) {
   
   legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
 }
+#===============================================================================
+#splitting into 8 directions
+deg_int <- seq(0, 360, by = 45)
+split_dat <- split(dat_voi, cut(dat_voi$wind_dir, deg_int, include.lowest = TRUE, labels = FALSE))
+dat_frames <- c("dat_A", "dat_B", "dat_C", "dat_D", "dat_E", "dat_F", "dat_G", "dat_H")
+
+for (i in seq_along(dat_frames)) {
+  assign(dat_frames[i], split_dat[[i]])
+}
+dat_frames <- lapply(c("dat_A", "dat_B", "dat_C", "dat_D", "dat_E", "dat_F", "dat_G", "dat_H"), function(x) get(x))
+c_var <- c("gpp", "reco", "nee")
+r_var <- c("temp_atmos", "rel_h", "VPD", "swc", "ppfd", "wind_sp")
+plots <- list()
+
+for (var in c_var){
+  p <- ggplot() +
+    labs(x = "DOY", y = var, color = "Data Frame")
+  
+  for (i in 1:8){
+    df <- dat_frames[[i]]
+    df_name <- i
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_point(data = df, aes_string(x = "doy", y = var, color = "df_name"))
+  }
+  plots[[var]] <- p
+}
+
+grid.arrange(grobs = plots, ncol = 3)
+
+#for r_var plots
+for (var in r_var){
+  p <- ggplot() +
+    labs(x = var, y = "GPP" , color = "Data Frame")
+  
+  for (i in 1:8){
+    df <- dat_frames[[i]]
+    df_name <- i
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_point(data = df, aes_string(x = var, y = "gpp", color = "df_name"))
+  }
+  plots[[var]] <- p
+}
+
+grid.arrange(grobs = plots, ncol = 3)
+
 
