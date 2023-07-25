@@ -11,6 +11,8 @@ library(plantecophys)
 devtools::install_github("cardiomoon/ggiraphExtra")
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
+dat_file <- read.csv("C:/Users/ual-laptop/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
+
 meas_h <- 14
 d <- (2/3) * meas_h
 dat_file$TIMESTAMP_START <- ymd_hm(as.character(dat_file$TIMESTAMP_START))
@@ -672,32 +674,56 @@ ggplot(dat_voi_A, aes(x = gpp)) +
        color = "Data Source") +
   theme_minimal()
 
+ggplot(dat_voi_A, aes(x = gpp)) +
+  geom_point(aes(y = predicted_gpp, color = "Predicted"), alpha = 0.5) +
+  geom_point(aes(y = gpp, color = "Actual"), alpha = 0.5) +
+  geom_smooth(method = "lm" , formula = y~x, mapping = aes(y = predicted_gpp))
+
 #----------------------
-plot_A <- ggplot(dat_voi_A, aes(x = wind_sp, y = gpp, shape = rel_h)) +
-  geom_point() +
-  theme_classic()
 
-plot_A
+library(AICcmodavg)
 
-plot_A + geom_smooth(method = lm, se = FALSE, fullrange = TRUE, aes(color = rel_h))
-  
-  
-  
-  plot(dat_voi_A[[vars]], dat_voi_A$gpp,
-     main = vars,
-     xlab = "var",
-     ylab = "gpp"
+model <- lm(gpp ~ wind_sp + rel_h + temp_atmos + ppfd + swc, data = dat_voi_A, na.action = na.exclude)
+model2 <- lm(gpp ~ wind_sp, data = dat_voi_A, na.action = na.exclude)
+model3 <- lm(gpp ~ wind_sp + rel_h, data = dat_voi_A, na.action = na.exclude)
+model4 <- lm(gpp ~ wind_sp + rel_h + temp_atmos, data = dat_voi_A, na.action = na.exclude)
+model5 <- lm(gpp ~ wind_sp + rel_h + temp_atmos + ppfd, data = dat_voi_A, na.action = na.exclude)
+model6 <- lm(gpp ~ wind_sp + rel_h + temp_atmos + ppfd + swc +VPD, data = dat_voi_A, na.action = na.exclude)
+model7 <- lm(gpp ~ VPD, data = dat_voi_A, na.action = na.exclude)
+model8 <- lm(gpp ~ rel_h + temp_atmos, data = dat_voi_A, na.action = na.exclude)
+model9 <- lm(gpp ~ temp_atmos + ppfd + swc, data = dat_voi_A, na.action = na.exclude)
+model10 <- lm(gpp ~ rel_h + ppfd + swc, data = dat_voi_A, na.action = na.exclude)
+
+dat_voi_A$predicted_gpp <- predict(model)
+dat_voi_A$predicted_gpp <- predict(model2)
+dat_voi_A$predicted_gpp <- predict(model3)
+dat_voi_A$predicted_gpp <- predict(model4)
+dat_voi_A$predicted_gpp <- predict(model5)
+dat_voi_A$predicted_gpp <- predict(model6)
+dat_voi_A$predicted_gpp <- predict(model7)
+dat_voi_A$predicted_gpp <- predict(model8)
+dat_voi_A$predicted_gpp <- predict(model9)
+dat_voi_A$predicted_gpp <- predict(model10)
+
+MLR_voi <- list(model ,
+                model2 ,
+                model3,
+                model4,
+                model5 ,
+                model6,
+                model7,
+                model8,
+                model9,
+                model10
 )
-points(dat_voi_A, dat_voi_A$gpp, col = "blue")
-abline(lm(dat_voi_A$gpp ~ dat_voi_A$wind_sp + dat_voi_A$rel_h), col = "blue")
-
-points(dat_voi_B[[vars]], dat_voi_B$gpp, col = "red")  
-abline(lm(dat_voi_B$gpp ~ dat_voi_B[[vars]]), col = "red")
+AICc.table <- aictab(cand.set = MLR_voi, second.ord = TRUE)
+AICc.table
 
 
-
-
-
+ggplot(dat_voi_A, aes(x = gpp)) +
+  geom_point(aes(y = predicted_gpp, color = "Predicted"), alpha = 0.5) +
+  geom_point(aes(y = gpp, color = "Actual"), alpha = 0.5) +
+  geom_smooth(method = "lm" , formula = y~x, mapping = aes(y = predicted_gpp))
 
 
 
