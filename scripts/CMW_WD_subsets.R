@@ -672,7 +672,27 @@ ggplot(dat_voi_A, aes(x = gpp)) +
        color = "Data Source") +
   theme_minimal()
 
+#----------------------
+plot_A <- ggplot(dat_voi_A, aes(x = wind_sp, y = gpp, shape = rel_h)) +
+  geom_point() +
+  theme_classic()
 
+plot_A
+
+plot_A + geom_smooth(method = lm, se = FALSE, fullrange = TRUE, aes(color = rel_h))
+  
+  
+  
+  plot(dat_voi_A[[vars]], dat_voi_A$gpp,
+     main = vars,
+     xlab = "var",
+     ylab = "gpp"
+)
+points(dat_voi_A, dat_voi_A$gpp, col = "blue")
+abline(lm(dat_voi_A$gpp ~ dat_voi_A$wind_sp + dat_voi_A$rel_h), col = "blue")
+
+points(dat_voi_B[[vars]], dat_voi_B$gpp, col = "red")  
+abline(lm(dat_voi_B$gpp ~ dat_voi_B[[vars]]), col = "red")
 
 
 
