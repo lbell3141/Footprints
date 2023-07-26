@@ -9,6 +9,7 @@ library(ggplot2)
 library(zoo)
 library(plantecophys)
 devtools::install_github("cardiomoon/ggiraphExtra")
+library(gridExtra)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("C:/Users/ual-laptop/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -55,7 +56,7 @@ dat_voi = dat_file %>%
     VPD = VPD
   ) %>%
   filter(test >= -15.5)%>%
-  filter(u_star > 0.1)%>%
+  filter(u_star > 0.2)%>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   filter(HH_UTC >= 8 & HH_UTC <= 17)
@@ -104,7 +105,7 @@ dat_voi = dat_file %>%
     VPD = VPD
   ) %>%
   filter(test >= -15.5)%>%
-  filter(u_star > 0.1)%>%
+  filter(u_star > 0.2)%>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
@@ -242,7 +243,7 @@ dat_voi = dat_file %>%
     swc = SWC_PI_1_1_A
   ) %>%
   filter(test >= -15.5)%>%
-  filter(u_star > 0.1)%>%
+  filter(u_star > 0.2)%>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   filter(HH_UTC %in% 12:14)%>%
@@ -337,7 +338,7 @@ dat_voi = dat_file %>%
     swc = SWC_PI_1_1_A
   ) %>%
   filter(test >= -15.5)%>%
-  filter(u_star > 0.1)%>%
+  filter(u_star > 0.2)%>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   filter(HH_UTC >= 11 & HH_UTC <= 14)%>%
@@ -420,7 +421,7 @@ dat_voi = dat_file %>%
   ) %>%
   #filter data to work with ffp code/online calculator 
   filter(test >= -15.5)%>%
-  filter(u_star > 0.1)%>%
+  filter(u_star > 0.2)%>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
@@ -608,7 +609,7 @@ dat_voi = dat_file %>%
     VPD = VPD
   ) %>%
   filter(test >= -15.5)%>%
-  filter(u_star > 0.1)%>%
+  filter(u_star > 0.2)%>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
@@ -725,6 +726,128 @@ ggplot(dat_voi_A, aes(x = gpp)) +
   geom_point(aes(y = gpp, color = "Actual"), alpha = 0.5) +
   geom_smooth(method = "lm" , formula = y~x, mapping = aes(y = predicted_gpp))
 
+#===============================================================================
+#less filtering; comparing wind directions
+dat_voi = dat_file %>%
+  mutate(
+    yyyy = year(TIMESTAMP_START),
+    mm = month(TIMESTAMP_START),
+    doy = yday(TIMESTAMP_START),
+    day = day(TIMESTAMP_START),
+    HH_UTC = hour(TIMESTAMP_START),
+    MM = minute(TIMESTAMP_START),
+    zm = meas_h,
+    d = d, 
+    u_mean = mean(WS_1_1_1, na.rm = TRUE),
+    wind_sp = WS_1_1_1,
+    L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
+    H = H,
+    temp_atmos = TA_1_1_1,
+    sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
+    u_star = USTAR,
+    wind_dir = WD_1_1_1,
+    test = zm/L,
+    #adding associated fluxes
+    gpp = GPP_PI,
+    nee = NEE_PI,
+    reco = RECO_PI,
+    le = LE,
+    ppfd = PPFD_IN_PI_F,
+    precip = P,
+    rel_h = RH_1_1_1,
+    swc = SWC_PI_1_1_A,
+    VPD = VPD
+  ) %>%
+  filter(test >= -15.5)%>%
+  filter(u_star > 0.2)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
+  filter(if_any(everything(), ~ . != "NA"))%>%
+  #filter for high frequency values during the day
+  filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
+  filter(lag(precip) == 0, lead(precip) == 0)%>%
+  filter(precip == 0) #%>%
+  #filter(ppfd >= 1000 & ppfd <= 1600)%>%  
+ #filter(temp_atmos >= 15 & temp_atmos <= 25)%>%
+ # filter(wind_sp >= 0.5 & wind_sp <= 2.5) 
+
+#subset main data into frames with opposite WD (here, NW ad SE directions)
+dat_voi_A <- dat_voi%>%
+  filter(wind_dir >= 270 & wind_dir <= 350) #%>%
+  sample_n(1000)
+dat_voi_B <- dat_voi%>%
+  filter(wind_dir >= 90 & wind_dir <= 170) #%>%
+  sample_n(1000)
 
 
+par(mfrow = c(2,2))
+plot(dat_voi_A$doy, dat_voi_A$gpp, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$gpp, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+plot(dat_voi_A$doy, dat_voi_A$reco, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$reco, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+plot(dat_voi_A$doy, dat_voi_A$le, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$le, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+plot(dat_voi_A$doy, dat_voi_A$nee, col = "blue")
+points(dat_voi_B$doy, dat_voi_B$nee, col = "red")
+legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 16, cex = 0.7)
+
+par(mfrow = c(2, 3))
+for (vars in drv_var) {
+  plot(dat_voi_A[[vars]], dat_voi_A$gpp,
+       main = vars,
+       xlab = "var",
+       ylab = "gpp"
+  )
+  #points(dat_voi_A[[vars]], dat_voi_A$gpp, col = "blue")
+  abline(lm(dat_voi_A$gpp ~ dat_voi_A[[vars]]), col = "blue")
+  
+ # points(dat_voi_B[[vars]], dat_voi_B$gpp, col = "red")  
+  abline(lm(dat_voi_B$gpp ~ dat_voi_B[[vars]]), col = "red")
+  
+  legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 1, cex = 0.7)
+}
+
+
+par(mfrow = c(1,1))
+dat_A_arr = dat_voi_A %>% arrange(doy)
+dat_B_arr = dat_voi_B %>% arrange(doy)
+
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$gpp, k = 500, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$gpp, k = 500, fill = NA)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  labs(title = "Moving Avg", x = "DOY", y = "GPP", color = "Data") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  theme_minimal()
+
+#==============================================================================
+# coloring time of day (regardless of WD)
+drv_var <- c("wind_sp", "ppfd", "temp_atmos", "rel_h", "swc", "VPD")
+
+dat_voi_tod <- dat_voi %>%
+  filter(wind_dir %in% c(270:350, 90:170)) #%>%
+  sample_n(1000)
+
+colors <- rainbow(length(unique(dat_voi_tod$HH_UTC)))
+
+for (i in seq_along(drv_var)) {
+  p <- ggplot(dat_voi_tod, aes_string(x = drv_var[i], y = "gpp", color = "factor(HH_UTC)")) +
+    geom_point() +
+    geom_smooth(method = "lm", color = "blue") +
+    labs(title = drv_var[i], x = "var", y = "gpp") +
+    scale_color_manual(values = colors) +  # Use the defined color palette
+    theme_minimal()
+  
+ plots[[i]] <- p
+  print(p)
+}
+grid.arrange(grobs = plots, ncol = 3)
 
