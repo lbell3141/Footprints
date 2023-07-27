@@ -156,14 +156,50 @@ dat_ffp <- dat_file %>%
   filter(doy %in% c(0:100, 325:366))%>%
   select(yyyy, mm, day, HH_UTC, MM, zm, d, z0, u_mean, L, sigma_v, u_star, wind_dir) %>%
   filter(across(everything(), ~ . != "NA")) %>%
-  filter(HH_UTC %in% 8:17)
+  filter(HH_UTC %in% 8:17)%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)
  
 dat_ffp$L = as.numeric(dat_ffp$L)
 dat_ffp$sigma_v = as.numeric(dat_ffp$sigma_v)
 dat_ffp$u_star = as.numeric(dat_ffp$u_star)
 dat_ffp$wind_dir = as.numeric(dat_ffp$wind_dir)
 
-write.csv(dat_ffp, "CMW_dt_win.csv", row.names = FALSE)
+write.csv(dat_ffp, "CMW_dt_win_SE.csv", row.names = FALSE)
+
+dat_ffp <- dat_file %>%
+  mutate(
+    yyyy = year(TIMESTAMP_START),
+    mm = month(TIMESTAMP_START),
+    day = day(TIMESTAMP_START),
+    doy = yday(TIMESTAMP_START),
+    HH_UTC = hour(TIMESTAMP_START),
+    MM = minute(TIMESTAMP_START),
+    zm = meas_h,
+    d = d, 
+    #h = bound_h,
+    z0 = "-999",
+    u_mean = mean(WS_1_1_1, na.rm = TRUE),
+    L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
+    sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
+    u_star = USTAR,
+    wind_dir = WD_1_1_1,
+    test = zm/L
+  ) %>%
+  filter(test >= -15.5) %>%
+  filter(u_star > 0.2) %>%
+  filter(doy %in% c(0:100, 325:366))%>%
+  select(yyyy, mm, day, HH_UTC, MM, zm, d, z0, u_mean, L, sigma_v, u_star, wind_dir) %>%
+  filter(across(everything(), ~ . != "NA")) %>%
+  filter(HH_UTC %in% 8:17)%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)
+
+dat_ffp$L = as.numeric(dat_ffp$L)
+dat_ffp$sigma_v = as.numeric(dat_ffp$sigma_v)
+dat_ffp$u_star = as.numeric(dat_ffp$u_star)
+dat_ffp$wind_dir = as.numeric(dat_ffp$wind_dir)
+
+write.csv(dat_ffp, "CMW_dt_win_NW.csv", row.names = FALSE)
+
 
 #for spring
 dat_ffp <- dat_file %>%
@@ -187,17 +223,52 @@ dat_ffp <- dat_file %>%
   ) %>%
   filter(test >= -15.5) %>%
   filter(u_star > 0.2) %>%
-  filter(doy >= 140 & doy<= 200)%>%
+  filter(doy >= 140 & doy <= 200)%>%
   select(yyyy, mm, day, HH_UTC, MM, zm, d, z0, u_mean, L, sigma_v, u_star, wind_dir) %>%
   filter(across(everything(), ~ . != "NA")) %>%
-  filter(HH_UTC %in% 8:17)
+  filter(HH_UTC %in% 8:17)%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)
 
 dat_ffp$L = as.numeric(dat_ffp$L)
 dat_ffp$sigma_v = as.numeric(dat_ffp$sigma_v)
 dat_ffp$u_star = as.numeric(dat_ffp$u_star)
 dat_ffp$wind_dir = as.numeric(dat_ffp$wind_dir)
 
-write.csv(dat_ffp, "CMW_dt_spr.csv", row.names = FALSE)
+write.csv(dat_ffp, "CMW_dt_spr_SE.csv", row.names = FALSE)
+
+dat_ffp <- dat_file %>%
+  mutate(
+    yyyy = year(TIMESTAMP_START),
+    mm = month(TIMESTAMP_START),
+    day = day(TIMESTAMP_START),
+    doy = yday(TIMESTAMP_START),
+    HH_UTC = hour(TIMESTAMP_START),
+    MM = minute(TIMESTAMP_START),
+    zm = meas_h,
+    d = d, 
+    #h = bound_h,
+    z0 = "-999",
+    u_mean = mean(WS_1_1_1, na.rm = TRUE),
+    L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
+    sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
+    u_star = USTAR,
+    wind_dir = WD_1_1_1,
+    test = zm/L
+  ) %>%
+  filter(test >= -15.5) %>%
+  filter(u_star > 0.2) %>%
+  filter(doy >= 140 & doy <= 200)%>%
+  select(yyyy, mm, day, HH_UTC, MM, zm, d, z0, u_mean, L, sigma_v, u_star, wind_dir) %>%
+  filter(across(everything(), ~ . != "NA")) %>%
+  filter(HH_UTC %in% 8:17)%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)
+
+dat_ffp$L = as.numeric(dat_ffp$L)
+dat_ffp$sigma_v = as.numeric(dat_ffp$sigma_v)
+dat_ffp$u_star = as.numeric(dat_ffp$u_star)
+dat_ffp$wind_dir = as.numeric(dat_ffp$wind_dir)
+
+write.csv(dat_ffp, "CMW_dt_spr_NW.csv", row.names = FALSE)
 
 #for late summer
 dat_ffp <- dat_file %>%
@@ -221,14 +292,49 @@ dat_ffp <- dat_file %>%
   ) %>%
   filter(test >= -15.5) %>%
   filter(u_star > 0.2) %>%
-  filter(doy %in% doy >= 250 & doy<= 300)%>%
+  filter(doy >= 250 & doy <= 300)%>%
   select(yyyy, mm, day, HH_UTC, MM, zm, d, z0, u_mean, L, sigma_v, u_star, wind_dir) %>%
   filter(across(everything(), ~ . != "NA")) %>%
-  filter(HH_UTC %in% 8:17)
+  filter(HH_UTC %in% 8:17)%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)
 
 dat_ffp$L = as.numeric(dat_ffp$L)
 dat_ffp$sigma_v = as.numeric(dat_ffp$sigma_v)
 dat_ffp$u_star = as.numeric(dat_ffp$u_star)
 dat_ffp$wind_dir = as.numeric(dat_ffp$wind_dir)
 
-write.csv(dat_ffp, "CMW_dt_sum.csv", row.names = FALSE)
+write.csv(dat_ffp, "CMW_dt_sum_SE.csv", row.names = FALSE)
+
+dat_ffp <- dat_file %>%
+  mutate(
+    yyyy = year(TIMESTAMP_START),
+    mm = month(TIMESTAMP_START),
+    day = day(TIMESTAMP_START),
+    doy = yday(TIMESTAMP_START),
+    HH_UTC = hour(TIMESTAMP_START),
+    MM = minute(TIMESTAMP_START),
+    zm = meas_h,
+    d = d, 
+    #h = bound_h,
+    z0 = "-999",
+    u_mean = mean(WS_1_1_1, na.rm = TRUE),
+    L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
+    sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
+    u_star = USTAR,
+    wind_dir = WD_1_1_1,
+    test = zm/L
+  ) %>%
+  filter(test >= -15.5) %>%
+  filter(u_star > 0.2) %>%
+  filter(doy >= 250 & doy <= 300)%>%
+  select(yyyy, mm, day, HH_UTC, MM, zm, d, z0, u_mean, L, sigma_v, u_star, wind_dir) %>%
+  filter(across(everything(), ~ . != "NA")) %>%
+  filter(HH_UTC %in% 8:17)%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)
+
+dat_ffp$L = as.numeric(dat_ffp$L)
+dat_ffp$sigma_v = as.numeric(dat_ffp$sigma_v)
+dat_ffp$u_star = as.numeric(dat_ffp$u_star)
+dat_ffp$wind_dir = as.numeric(dat_ffp$wind_dir)
+
+write.csv(dat_ffp, "CMW_dt_sum_NW.csv", row.names = FALSE)
