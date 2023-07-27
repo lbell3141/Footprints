@@ -10,6 +10,7 @@ library(zoo)
 library(plantecophys)
 devtools::install_github("cardiomoon/ggiraphExtra")
 library(gridExtra)
+library(tidyr)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -1065,6 +1066,30 @@ summary(lm(dat_voi_B$gpp ~ dat_voi_B$swc))
 summary(lm(dat_voi_A$gpp ~ dat_voi_A$rel_h))
 summary(lm(dat_voi_B$gpp ~ dat_voi_B$rel_h))
 
+dat_voi <- dat_voi %>%
+  mutate(wind_label = case_when(
+    wind_dir >= 270 & wind_dir <= 350 ~ "A",
+    wind_dir >= 90 & wind_dir <= 170 ~ "B",
+    TRUE ~ NA_character_
+  ))
+
+dat_voi_cleaned <- drop_na(dat_voi, gpp, wind_label)
+
+ggplot( dat_voi_cleaned, aes(x= VPD, y = gpp, col = wind_label)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+comp_co <- compare.coeff <- function(b1,se1,b2,se2){
+  return((b1-b2)/sqrt(se1^2+se2^2))
+}
+
+dat_voi_cleaned_win = dat_voi_cleaned%>%
+  filter(doy %in% c(0:90, 325:366))
+
+summary(lm(gpp ~ VPD + wind_label + VPD:wind_label,data=dat_voi_cleaned))
+summary(lm(gpp ~ wind_sp + wind_label + wind_sp:wind_label,data=dat_voi_cleaned))
+summary(lm(gpp ~ rel_h + wind_label + rel_h:wind_label,data=dat_voi_cleaned))
+summary(lm(gpp ~ swc + wind_label + swc:wind_label,data=dat_voi_cleaned))
 
 
 #===============================================================================
