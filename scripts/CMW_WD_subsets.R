@@ -110,11 +110,11 @@ dat_voi = dat_file %>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
-  filter(HH_UTC >= 11 & HH_UTC <= 14)%>%
+  filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
-  filter(precip == 0)%>%
-  filter(ppfd >= 1000 & ppfd <= 1600)%>%  
-  filter(temp_atmos >= 15 & temp_atmos <= 25)%>%
+  filter(precip == 0) #%>%
+  #filter(ppfd >= 1000 & ppfd <= 1600)%>%  
+  #filter(temp_atmos >= 15 & temp_atmos <= 25)%>%
   filter(wind_sp >= 0.5 & wind_sp <= 2.5) 
 
 #subset main data into frames with opposite WD (here, NW ad SE directions)
@@ -755,7 +755,8 @@ dat_voi = dat_file %>%
   #filter for high frequency values during the day
   filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
-  filter(precip == 0) #%>%
+  filter(precip == 0) %>%
+  #filter(doy %in% c(0:100, 325:366))
   #filter(ppfd >= 1000 & ppfd <= 1600)%>%  
  #filter(temp_atmos >= 15 & temp_atmos <= 25)%>%
  # filter(wind_sp >= 0.5 & wind_sp <= 2.5) 
@@ -1132,8 +1133,7 @@ dat_voi = dat_file %>%
   filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
   filter(precip == 0) %>%
-  filter(wind_dir %in% c(270:350, 90:170)) %>%
-  filter(doy >= 140 & doy <= 300)
+  filter(wind_dir %in% c(270:350, 90:170))
 
 par(mfrow = c(1,1))
 plot(dat_voi$wind_dir, dat_voi$wind_sp)
@@ -1145,8 +1145,8 @@ dat_voi_A <- dat_voi%>%
 dat_voi_B <- dat_voi%>%
   filter(wind_dir >= 90 & wind_dir <= 170) %>%
   sample_n(1376)
-hist(dat_voi_A$wind_sp, breaks = 11, col = "blue")
-hist(dat_voi_B$wind_sp, breaks = 11, col = rgb(1, 0, 0, alpha = 0.5), add = TRUE)
+hist(dat_voi_A$ppfd, breaks = 11, col = "blue")
+hist(dat_voi_B$ppfd, breaks = 11, col = rgb(1, 0, 0, alpha = 0.5), add = TRUE)
 legend("topright", legend = c("NW", "SE"), col = c("blue", "red"), fill = c("blue", rgb(1, 0, 0, alpha = 0.5)))
 
 mean(dat_voi_A$wind_sp, na.rm = TRUE)
