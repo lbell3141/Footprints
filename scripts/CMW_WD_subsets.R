@@ -753,9 +753,9 @@ dat_voi = dat_file %>%
   select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, gpp, nee, reco, le, ppfd, precip, rel_h, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   #filter for high frequency values during the day
-  filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
+  filter(HH_UTC %in% c(0:4, 22:23))%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
-  filter(precip == 0) %>%
+  filter(precip == 0) #%>%
   #filter(doy %in% c(0:100, 325:366))
   #filter(ppfd >= 1000 & ppfd <= 1600)%>%  
  #filter(temp_atmos >= 15 & temp_atmos <= 25)%>%
@@ -809,13 +809,13 @@ dat_A_arr = dat_voi_A %>% arrange(doy)
 dat_B_arr = dat_voi_B %>% arrange(doy)
 
 
-dat_A_arr$movavg_A = rollmean(dat_A_arr$gpp, k = 500, fill = NA)
-dat_B_arr$movavg_B = rollmean(dat_B_arr$gpp, k = 500, fill = NA)
+dat_A_arr$movavg_A = rollmean(dat_A_arr$reco, k = 100, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$reco, k = 300, fill = NA)
 
 ggplot() +
   geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
   geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
-  labs(title = "Moving Avg", x = "DOY", y = "GPP", color = "Data") +
+  labs(title = "Moving Avg", x = "DOY", y = "reco", color = "Data") +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
   theme_minimal()
 
