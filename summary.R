@@ -103,9 +103,16 @@ ggplot(dat_voi, aes(x = wind_dir)) +
   labs(x = "Wind Direction (degrees)", y = "Density") +
   ggtitle("Probability Density Function of Wind Direction")
 
+#===============================================================================
+#Finding mean TWI value and PFT values from rasters clipped by
+#by wind direction in QGIS
 
+files = list.files('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/summary_R_files', full.names = TRUE)
 
-
+NW.twi = raster(files[3])
+SE.twi = raster(files[13])
+NW.RAP = stack(files[1])
+SE.RAP = stack(files[11])
 
 
 
