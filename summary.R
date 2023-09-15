@@ -38,10 +38,10 @@ dat_voi = dat_file %>%
     zm = meas_h,
     d = d, 
     u_mean = mean(WS_1_1_1, na.rm = TRUE),
-    wind_sp = WS_1_1_1,
+    WS = WS_1_1_1,
     L = (-((USTAR^3) * (TA_1_1_1 + 273)) / (0.4 * 9.8 * (H / (1.25 * 1004)))),
     H = H,
-    temp_atmos = TA_1_1_1,
+    TA = TA_1_1_1,
     sigma_v = sqrt((u_mean*((-1.3*L + 0.1)^2))/100000),
     u_star = USTAR,
     wind_dir = WD_1_1_1,
@@ -51,15 +51,15 @@ dat_voi = dat_file %>%
     NEE = NEE_PI,
     RECO = RECO_PI,
     le = LE,
-    ppfd = PPFD_IN_PI_F,
+    PPFD = PPFD_IN_PI_F,
     precip = P,
-    rel_h = RH_1_1_1,
+    RH = RH_1_1_1,
     swc = SWC_PI_1_1_A,
     VPD = VPD
   ) %>%
   filter(test >= -15.5)%>%
   filter(u_star > 0.25)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, wind_sp, L, u_star, wind_dir, temp_atmos, H, GPP, NEE, RECO, le, ppfd, precip, rel_h, swc, VPD)%>%
+  select(yyyy, mm, doy, day, HH_UTC, MM, WS, L, u_star, wind_dir, TA, H, GPP, NEE, RECO, le, PPFD, precip, RH, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
@@ -75,7 +75,7 @@ dat_voi_B <- dat_voi%>%
   filter(doy %in% c(0:100, 330:366))
 
 #looping over vars to find means for either direction
-vars = c("wind_sp", "VPD", "temp_atmos", "rel_h", "GPP", "RECO", "NEE")
+vars = c("WS", "VPD", "TA", "RH", "PPFD", "GPP", "RECO", "NEE")
 
 #NW:
 means_A <- numeric(length(vars))
@@ -135,14 +135,7 @@ for (i in 1:nlayers(RAP_B)){
   means_RAP_B[i] <- mean(RAP_B[[i]], na.rm = TRUE)
 }
 
-#temp adding sum df here
-df_means_A <- data.frame(Variable = vars, Mean_NW = means_A)
-df_means_B <- data.frame(Variable = vars, Mean_SE = means_B)
-sum_df <- merge(df_means_A, df_means_B, by = "Variable")
-sum_df$Difference <- sum_df$Mean_NW - sum_df$Mean_SE
-
 #adding to previous summary dataframe
-
 df_mean_twi_A <- data.frame(Variable = "TWI", Mean_NW = mean_TWI_A)
 df_mean_twi_B <- data.frame(Variable = "TWI", Mean_SE = mean_TWI_B)
 sum_df_twi <- merge(df_mean_twi_A, df_mean_twi_B, by = "Variable")
@@ -153,7 +146,13 @@ df_mean_rap_B <- data.frame(Variable = rap.functional.classes, Mean_SE = means_R
 sum_df_RAP <- merge(df_mean_rap_A, df_mean_rap_B, by = "Variable")
 sum_df_RAP$Difference <- sum_df_RAP$Mean_NW - sum_df_RAP$Mean_SE
 
-sum_df <- merge(sum_df, sum_df_twi, by = "Difference")
-sum_df <- merge(sum_df, sum_df_RAP, by = "Variable", all.x = TRUE)
+sum_df = rbind(sum_df, sum_df_twi, sum_df_RAP)
 
+#formatting summary table
+#reorder variables:
+var_order <- c("PPFD", "RH", "TA", "VPD", "WS", "TWI", "BGR", "LTR", "AFG", "PFG", "SHR", "TRE", "RECO", "GPP", "NEE")
+sum_df$Variable <- factor(sum_df$Variable, levels = var_order)
+sum_df <- sum_df %>% arrange(Variable)
 
+sum_table <- tableGrob(sum_df)
+plot(sum_table)
