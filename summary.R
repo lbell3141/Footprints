@@ -11,6 +11,8 @@ devtools::install_github("cardiomoon/ggiraphExtra")
 library(gridExtra)
 library(tidyr)
 library(cowplot)
+library(sp)
+library(raster)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -106,18 +108,52 @@ ggplot(dat_voi, aes(x = wind_dir)) +
 #===============================================================================
 #Finding mean TWI value and PFT values from rasters clipped by
 #by wind direction in QGIS
+# _A = NW; _B = SE
 
 files = list.files('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/summary_R_files', full.names = TRUE)
 
-NW.twi = raster(files[3])
-SE.twi = raster(files[13])
-NW.RAP = stack(files[1])
-SE.RAP = stack(files[11])
+TWI_A = raster(files[3])
+TWI_B = raster(files[5])
+RAP_A = stack(files[2])
+RAP_B = stack(files[4])
 
+mean_TWI_A = mean(TWI_A[], na.rm = TRUE)
+mean_TWI_B = mean(TWI_B[], na.rm = TRUE)
 
+#average percent cover for each PFT
+rap.functional.classes = c('AFG','BGR','LTR','PFG','SHR','TRE')
 
+means_RAP_A = numeric(nlayers(RAP_A))
+means_RAP_B = numeric(nlayers(RAP_B))
 
+for (i in 1:nlayers(RAP_A)){
+  functional.group <- rap.functional.classes[i]
+  means_RAP_A[i] <- mean(RAP_A[[i]], na.rm = TRUE)
+}
+for (i in 1:nlayers(RAP_B)){
+  functional.group <- rap.functional.classes[i]
+  means_RAP_B[i] <- mean(RAP_B[[i]], na.rm = TRUE)
+}
 
+#temp adding sum df here
+df_means_A <- data.frame(Variable = vars, Mean_NW = means_A)
+df_means_B <- data.frame(Variable = vars, Mean_SE = means_B)
+sum_df <- merge(df_means_A, df_means_B, by = "Variable")
+sum_df$Difference <- sum_df$Mean_NW - sum_df$Mean_SE
 
+#adding to previous summary dataframe
+
+df_mean_twi_A <- data.frame(Variable = "TWI", Mean_NW = mean_TWI_A)
+df_mean_twi_B <- data.frame(Variable = "TWI", Mean_SE = mean_TWI_B)
+sum_df_twi <- merge(df_mean_twi_A, df_mean_twi_B, by = "Variable")
+sum_df_twi$Difference <- sum_df_twi$Mean_NW - sum_df_twi$Mean_SE
+
+df_mean_rap_A <- data.frame(Variable = rap.functional.classes, Mean_NW = means_RAP_A)
+df_mean_rap_B <- data.frame(Variable = rap.functional.classes, Mean_SE = means_RAP_B)
+sum_df_RAP <- merge(df_mean_rap_A, df_mean_rap_B, by = "Variable")
+sum_df_RAP$Difference <- sum_df_RAP$Mean_NW - sum_df_RAP$Mean_SE
+
+sum_df <- merge(sum_df, sum_df_twi, by = "Difference")
+sum_df <- merge(sum_df, sum_df_RAP, by = "Variable", all.x = TRUE)
 
 
