@@ -59,7 +59,7 @@ dat_voi = dat_file %>%
   ) %>%
   filter(test >= -15.5)%>%
   filter(u_star > 0.25)%>%
-  select(yyyy, mm, doy, day, HH_UTC, MM, WS, L, u_star, wind_dir, TA, H, GPP, NEE, RECO, le, PPFD, precip, RH, swc, VPD)%>%
+  dplyr::select(yyyy, mm, doy, day, HH_UTC, MM, WS, L, u_star, wind_dir, TA, H, GPP, NEE, RECO, le, PPFD, precip, RH, swc, VPD)%>%
   filter(if_any(everything(), ~ . != "NA"))%>%
   filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
@@ -102,6 +102,8 @@ sum_df$Difference <- sum_df$Mean_NW - sum_df$Mean_SE
 #making a PDF for wind direction 
 ggplot(dat_voi, aes(x = wind_dir)) +
   geom_density(alpha = 0.2, fill = "green") +
+  annotate('rect', xmin=90, xmax=170, ymin=0, ymax=0.005, alpha=.2, fill='red')+
+  annotate('rect', xmin=270, xmax=350, ymin=0, ymax=0.005, alpha=.2, fill='red')+
   labs(x = "Wind Direction (degrees)", y = "Density") +
   ggtitle("Probability Density Function of Wind Direction")
 
