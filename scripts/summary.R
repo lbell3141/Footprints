@@ -13,6 +13,7 @@ library(tidyr)
 library(cowplot)
 library(sp)
 library(raster)
+library(ggspatial)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -158,3 +159,71 @@ sum_df <- sum_df %>% arrange(Variable)
 
 sum_table <- tableGrob(sum_df)
 plot(sum_table)
+
+#===============================================================================
+#reformatting graphs 
+rap = stack('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/Land_Cover/FFP_RAP_VegCover_2017.tif')
+
+rap.major.pft.map = function(rap) {
+  
+  # Get spatial info
+  rap.crs = crs(rap)
+  rap.ext = extent(rap)
+  
+  nrows = dim(rap)[1]
+  ncols = dim(rap)[2]
+  
+  # Get RAP PFT layer names
+  rap.pfts = names(rap)
+  
+  # Set up 2D map output
+  output.map = rap[[1]]
+  output.map[] = NA
+  output.map = as.matrix(output.map)
+  
+  # Convert RAP raster stack to 3D array
+  rap.array = as.array(rap)
+  
+  # Loop through rows/columns to get percent pixel coverage of each PFT vegetation cover class
+  for (row in 1 : nrows){
+    for (col in 1 : ncols){
+      
+      # Get vector of %pixel of each PFT (see index below) at specifc row+col
+      # Index = 1-6; 1=AFG, 2=BGR, 3=LTR, 4=PFG, 5=SHR, 6=TRE
+      pfts = rap.array[row,col,]
+      
+      # Get the index value of the major PFT (i.e. maximum %pixel coverage)
+      major.pft = which(pfts == max(pfts, na.rm = TRUE), arr.ind = TRUE)
+      
+      # If there are two or more PFTs with the same %pixel coverage, randomly select one and assign the index value to output pixel
+      if (length(major.pft) > 1){
+        output.map[row,col] = major.pft[sample(length(major.pft),1)]
+      } else {output.map[row,col] = major.pft}
+    }
+  }
+  
+  # Rasterize 2D output map and assign spatial info
+  output.map = raster(output.map)
+  crs(output.map) = rap.crs
+  extent(output.map) = rap.ext
+  
+  return(output.map)
+}
+
+major.pft.map = rap.major.pft.map(rap)
+# Define a custom color palette
+custom_palette <- c( "AFG" = "#FFCCCC",  
+                     "BGR" = "#E6E6FA",  
+                     "LTR" = "#CCCCFF",
+                     "TRE" = "#CCFFCC",
+                     "SHR" = "#FFD700",
+                     "PFG" = "#FFFF99" )
+
+# Plot the raster with the custom color palette
+plot(major.pft.map, xlab = "", ylab = "", col = custom_palette[major.pft.map[]], axes = FALSE)
+title("Dominant PFT per Footprint Pixel")
+
+# Create a custom legend
+legend("topright", legend = names(custom_palette[4:6]), fill = unname(custom_palette[4:6]))
+
+#overlay shapefile of FFP and remove right legend 
