@@ -14,6 +14,8 @@ library(cowplot)
 library(sp)
 library(raster)
 library(ggspatial)
+library(rgdal)
+library(maptools)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -166,43 +168,29 @@ rap = stack('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Foo
 
 rap.major.pft.map = function(rap) {
   
-  # Get spatial info
   rap.crs = crs(rap)
   rap.ext = extent(rap)
-  
   nrows = dim(rap)[1]
   ncols = dim(rap)[2]
-  
-  # Get RAP PFT layer names
   rap.pfts = names(rap)
-  
-  # Set up 2D map output
   output.map = rap[[1]]
   output.map[] = NA
   output.map = as.matrix(output.map)
   
-  # Convert RAP raster stack to 3D array
   rap.array = as.array(rap)
   
-  # Loop through rows/columns to get percent pixel coverage of each PFT vegetation cover class
   for (row in 1 : nrows){
     for (col in 1 : ncols){
-      
-      # Get vector of %pixel of each PFT (see index below) at specifc row+col
-      # Index = 1-6; 1=AFG, 2=BGR, 3=LTR, 4=PFG, 5=SHR, 6=TRE
       pfts = rap.array[row,col,]
       
-      # Get the index value of the major PFT (i.e. maximum %pixel coverage)
       major.pft = which(pfts == max(pfts, na.rm = TRUE), arr.ind = TRUE)
       
-      # If there are two or more PFTs with the same %pixel coverage, randomly select one and assign the index value to output pixel
       if (length(major.pft) > 1){
         output.map[row,col] = major.pft[sample(length(major.pft),1)]
       } else {output.map[row,col] = major.pft}
     }
   }
   
-  # Rasterize 2D output map and assign spatial info
   output.map = raster(output.map)
   crs(output.map) = rap.crs
   extent(output.map) = rap.ext
@@ -211,19 +199,34 @@ rap.major.pft.map = function(rap) {
 }
 
 major.pft.map = rap.major.pft.map(rap)
-# Define a custom color palette
 custom_palette <- c( "AFG" = "#FFCCCC",  
                      "BGR" = "#E6E6FA",  
                      "LTR" = "#CCCCFF",
                      "TRE" = "#CCFFCC",
                      "SHR" = "#FFD700",
                      "PFG" = "#FFFF99" )
-
-# Plot the raster with the custom color palette
 plot(major.pft.map, xlab = "", ylab = "", col = custom_palette[major.pft.map[]], axes = FALSE)
 title("Dominant PFT per Footprint Pixel")
-
-# Create a custom legend
 legend("topright", legend = names(custom_palette[4:6]), fill = unname(custom_palette[4:6]))
+ffp_shp = readShapeSpatial("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/TWI/30_TWI/twi_ffp_sec.shp")
+plot(ffp_shp, bg = "transparent", add = TRUE)
+#===============================================================================
+#fixing moving averages 
+dat_voi_A <- dat_voi%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)
+dat_voi_B <- dat_voi%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)
 
-#overlay shapefile of FFP and remove right legend 
+par(mfrow = c(1,1))
+dat_A_arr = dat_voi_A %>% arrange(doy)
+dat_B_arr = dat_voi_B %>% arrange(doy)
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$gpp, k = 500, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$gpp, k = 500, fill = NA)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  labs(title = "Moving Avg", x = "DOY", y = "GPP", color = "Data Source") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  theme_minimal()
