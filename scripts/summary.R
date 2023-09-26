@@ -16,6 +16,7 @@ library(raster)
 library(ggspatial)
 library(rgdal)
 library(maptools)
+library(leaflet)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -110,17 +111,45 @@ ggplot(dat_voi, aes(x = wind_dir)) +
   labs(x = "Wind Direction (degrees)", y = "Density") +
   ggtitle("Probability Density Function of Wind Direction")
 
+#finding % contribution of both WDs
+GPP_total <- sum(dat_voi$GPP, na.rm = TRUE)
+
+dat_voi_A <- dat_voi%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)
+  GPP_total_A <- sum(dat_voi_A$GPP, na.rm = TRUE)
+  GPP_contr_A <- (GPP_total_A/GPP_total)*100
+
+dat_voi_B <- dat_voi%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)
+  GPP_total_B <- sum(dat_voi_B$GPP, na.rm = TRUE)
+  GPP_contr_B <- (GPP_total_B/GPP_total)*100
+
+#===============================================================================
+#mask twi using half meter data to compare. mask with shapefile for 0.5m res 
+
+hm_TWI = raster('data/summary_R_files/0.5_TWI.tif')
+ffp_shp = readOGR(dsn = 'data/summary_R_files/ffp_shp.gpkg')
+ffp_shp = spTransform(x = ffp_shp, CRSobj = '+proj=utm +zone=12 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
+A_shp = readOGR(dsn = 'data/summary_R_files/hm_NW_clip.shp')
+B_shp = readOGR(dsn = 'data/summary_R_files/hm_SE_clip.shp')
+
+masked_TWI_A = mask(x = hm_TWI, mask = A_shp)
+masked_TWI_B = mask(x = hm_TWI, mask = B_shp)
+
+hm_A_mean <- mean(masked_TWI_A[], na.rm = TRUE)
+hm_B_mean <- mean(masked_TWI_B[], na.rm = TRUE)
+hm_dif <- hm_A_mean-hm_B_mean
+
 #===============================================================================
 #Finding mean TWI value and PFT values from rasters clipped by
 #by wind direction in QGIS
 # _A = NW; _B = SE
 
-files = list.files('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/summary_R_files', full.names = TRUE)
+#masked TWI and mean found above; still need to mask the RAP data
+RAP_dat = stack('Land_Cover/RAP_VegCover_2017.tif')
+A_shp = spTransform(x = A_shp, CRSobj = '+proj=utm +zone=12 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs')
+masked_RAP_A = mask(x = RAP_dat, mask = A_shp)
 
-TWI_A = raster(files[3])
-TWI_B = raster(files[5])
-RAP_A = stack(files[2])
-RAP_B = stack(files[4])
 
 mean_TWI_A = mean(TWI_A[], na.rm = TRUE)
 mean_TWI_B = mean(TWI_B[], na.rm = TRUE)
@@ -161,6 +190,7 @@ sum_df <- sum_df %>% arrange(Variable)
 
 sum_table <- tableGrob(sum_df)
 plot(sum_table)
+
 
 #===============================================================================
 #reformatting graphs 
@@ -230,3 +260,5 @@ ggplot() +
   labs(title = "Moving Avg", x = "DOY", y = "GPP", color = "Data Source") +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
   theme_minimal()
+
+
