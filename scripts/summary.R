@@ -261,4 +261,36 @@ ggplot() +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
   theme_minimal()
 
+#===============================================================================
+#Checking for WD frequency 
+# Create a function to calculate wind direction frequencies for a given data frame
+WD_freq <- function(df) {
+  df %>%
+    group_by(doy) %>%
+    summarise(frequency = n()) %>%
+    arrange(doy)
+}
 
+# Calculate wind direction frequencies for both data frames
+wind_freq_A <- WD_freq(dat_voi_A)
+wind_freq_B <- WD_freq(dat_voi_B)
+
+# Combine the frequencies into a single data frame
+combined_data <- merge(wind_freq_A, wind_freq_B, by = "doy", all = TRUE)
+colnames(combined_data) <- c("doy", "Frequency_A", "Frequency_B")
+
+ggplot(combined_data, aes(x = doy)) +
+  geom_line(aes(y = Frequency_A, color = "NW"), alpha = 0.7) +
+  geom_line(aes(y = Frequency_B, color = "SE"), alpha = 0.7) +
+  geom_smooth(aes(y = Frequency_A, color = "NW"), method = "loess", se = FALSE) +
+  geom_smooth(aes(y = Frequency_B, color = "SE"), method = "loess", se = FALSE) +
+  scale_color_manual(values = c("NW" = "blue", "SE" = "red")) +
+  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=200, alpha=.05, fill='red')+
+  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=200, alpha=.05, fill='red')+
+  annotate('rect', xmin=280, xmax=300, ymin=0, ymax=200, alpha=.05, fill='red')+
+  annotate('rect', xmin=315, xmax=366, ymin=0, ymax=200, alpha=.05, fill='red')+
+  labs(x = "Day of Year", y = "Wind Direction Frequency", color = "Data Frame") +
+  theme_minimal()
+
+
+#===============================================================================
