@@ -262,7 +262,7 @@ ggplot() +
   theme_minimal()
 
 #===============================================================================
-#Checking for WD frequency 
+#Checking for WD frequency during DOY
 # Create a function to calculate wind direction frequencies for a given data frame
 WD_freq <- function(df) {
   df %>%
@@ -282,8 +282,8 @@ colnames(combined_data) <- c("doy", "Frequency_A", "Frequency_B")
 ggplot(combined_data, aes(x = doy)) +
   geom_line(aes(y = Frequency_A, color = "NW"), alpha = 0.7) +
   geom_line(aes(y = Frequency_B, color = "SE"), alpha = 0.7) +
-  geom_smooth(aes(y = Frequency_A, color = "NW"), method = "loess", se = FALSE) +
-  geom_smooth(aes(y = Frequency_B, color = "SE"), method = "loess", se = FALSE) +
+  geom_smooth(aes(y = Frequency_A, color = "NW"), method = "loess", se = FALSE, span = 0.3) +
+  geom_smooth(aes(y = Frequency_B, color = "SE"), method = "loess", se = FALSE, span = 0.3) +
   scale_color_manual(values = c("NW" = "blue", "SE" = "red")) +
   annotate('rect', xmin=0, xmax=100, ymin=0, ymax=200, alpha=.05, fill='red')+
   annotate('rect', xmin=145, xmax=190, ymin=0, ymax=200, alpha=.05, fill='red')+
@@ -293,4 +293,90 @@ ggplot(combined_data, aes(x = doy)) +
   theme_minimal()
 
 
+#-----------------------------------------
+#changing to a moving average plot
+WD_freq <- function(df) {
+  df %>%
+    group_by(doy) %>%
+    summarise(frequency = n()) %>%
+    arrange(doy)
+}
+wind_freq_A <- WD_freq(dat_voi_A)
+wind_freq_B <- WD_freq(dat_voi_B)
+
+# Combine the frequencies into a single frame
+combined_data = merge(wind_freq_A, wind_freq_B, by = "doy", all = TRUE)
+colnames(combined_data) <- c("doy", "Frequency_A", "Frequency_B")
+
+# Calculate moving averages for both WD
+combined_data$Moving_Average_A <- rollapply(combined_data$Frequency_A, width = 15, FUN = mean, fill = NA, align = "right", na.rm = TRUE)
+combined_data$Moving_Average_B <- rollapply(combined_data$Frequency_B, width = 15, FUN = mean, fill = NA, align = "right", na.rm = TRUE)
+
+ggplot(combined_data, aes(x = doy)) +
+  #geom_line(aes(y = Frequency_A, color = "NW"), alpha = 0.7) +
+  #geom_line(aes(y = Frequency_B, color = "SE"), alpha = 0.7) +
+  geom_line(aes(y = Moving_Average_A, color = "NW Moving Avg"), alpha = 1) +
+  geom_line(aes(y = Moving_Average_B, color = "SE Moving Avg"), alpha = 1) +
+  scale_color_manual(values = c("NW" = "lightblue", "SE" = "lightcoral", "NW Moving Avg" = "blue", "SE Moving Avg" = "red")) +
+  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=200, alpha=.05, fill='red')+
+  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=200, alpha=.05, fill='red')+
+  annotate('rect', xmin=280, xmax=300, ymin=0, ymax=200, alpha=.05, fill='red')+
+  annotate('rect', xmin=315, xmax=366, ymin=0, ymax=200, alpha=.05, fill='red')+
+  labs(x = "Day of Year", y = "Number of Observations", color = "Data Frame") +
+  theme_minimal()
+
 #===============================================================================
+#Checking for WD frequecy during TOD
+# Create a function to calculate wind direction frequencies for a given data frame
+WD_freq <- function(df) {
+  df %>%
+    group_by(HH_UTC) %>%
+    summarise(frequency = n()) %>%
+    arrange(HH_UTC)
+}
+
+# Calculate wind direction frequencies for both data frames
+wind_freq_A <- WD_freq(dat_voi_A)
+wind_freq_B <- WD_freq(dat_voi_B)
+
+# Combine the frequencies into a single data frame
+combined_data <- merge(wind_freq_A, wind_freq_B, by = "HH_UTC", all = TRUE)
+colnames(combined_data) <- c("HH_UTC", "Frequency_A", "Frequency_B")
+
+ggplot(combined_data, aes(x = HH_UTC)) +
+  geom_line(aes(y = Frequency_A, color = "NW"), alpha = 0.7) +
+  geom_line(aes(y = Frequency_B, color = "SE"), alpha = 0.7) +
+  geom_smooth(aes(y = Frequency_A, color = "NW"), method = "loess", se = FALSE) +
+  geom_smooth(aes(y = Frequency_B, color = "SE"), method = "loess", se = FALSE) +
+  scale_color_manual(values = c("NW" = "blue", "SE" = "red")) +
+  labs(x = "Time of Day (hr)", y = "Number of Observations", color = "Data Frame") +
+  theme_minimal()
+
+#===============================================================================
+#RC for premonsoon 
+dat_voi_A_pre = dat_voi %>%
+  filter(wind_dir >= 270 & wind_dir <= 350) %>%
+  filter(doy >= 145 & doy <= 190)
+dat_voi_B_pre = dat_voi %>%
+  filter(wind_dir >= 90 & wind_dir <= 170) %>%
+  filter(doy >= 145 & doy <= 190)
+
+drv_var <- c("WS", "PPFD", "TA", "RH", "VPD")
+
+par(mfrow = c(2, 3))
+for (vars in drv_var) {
+  plot(dat_voi_A[[vars]], dat_voi_A$GPP,
+       xlab = vars,  # Set x-axis label to the variable name
+       ylab = "GPP",
+       main = "",  # Clear the default title
+       pch = 19,    # Use filled circles for points
+  )
+  points(dat_voi_A_pre[[vars]], dat_voi_A_pre$GPP)
+  points(dat_voi_B_pre[[vars]], dat_voi_B_pre$GPP)
+  abline(lm(dat_voi_A_pre$GPP ~ dat_voi_A_pre[[vars]]), col = "lightblue")
+  abline(lm(dat_voi_B_pre$GPP ~ dat_voi_B_pre[[vars]]), col = "red")
+  
+  legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 19, cex = 0.7)
+}
+
+
