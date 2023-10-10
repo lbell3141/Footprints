@@ -17,6 +17,7 @@ library(ggspatial)
 library(rgdal)
 library(maptools)
 library(leaflet)
+library(ggpubr)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -272,24 +273,12 @@ dat_voi_A <- dat_voi%>%
 dat_voi_B <- dat_voi%>%
   filter(wind_dir >= 90 & wind_dir <= 170)
 
-#par(mfrow = c(1,1))
 dat_A_arr = dat_voi_A %>% arrange(doy)
 dat_B_arr = dat_voi_B %>% arrange(doy)
 
 dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 500, fill = NA)
 dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 500, fill = NA)
 
-ggplot() +
-  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
-  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
-  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=18, alpha=.05, fill='red')+
-  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=18, alpha=.05, fill='red')+
-  annotate('rect', xmin=265, xmax=290, ymin=0, ymax=18, alpha=.05, fill='red')+
-  annotate('rect', xmin=325, xmax=366, ymin=0, ymax=18, alpha=.05, fill='red')+
-  labs(title = "Moving Avg", x = "Day of Year", y = "Mean GPP", color = "") +
-  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
-  theme_minimal()
-#------------------------------
 #NEE mov avg
 dat_A_arr = dat_voi_A %>% arrange(doy)
 dat_B_arr = dat_voi_B %>% arrange(doy)
@@ -297,17 +286,35 @@ dat_B_arr = dat_voi_B %>% arrange(doy)
 dat_A_arr$movavg_A_NEE = rollmean(dat_A_arr$NEE, k = 500, fill = NA)
 dat_B_arr$movavg_B_NEE = rollmean(dat_B_arr$NEE, k = 500, fill = NA)
 
-ggplot() +
+plot_GPP <- ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
+  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=265, xmax=290, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=325, xmax=366, ymin=0, ymax=18, alpha=.05, fill='red')+
+  labs(title = "", x = "", y = "GPP (µmolCO2 m-2 s-1)", color = "") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
+  theme_minimal()+
+  guides(color = FALSE)
+
+plot_NEE <- ggplot() +
   geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A_NEE, color = "Northwestern WD")) +
   geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B_NEE, color = "Southeastern WD")) +
   annotate('rect', xmin=0, xmax=100, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
   annotate('rect', xmin=145, xmax=190, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
   annotate('rect', xmin=265, xmax=290, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
   annotate('rect', xmin=325, xmax=366, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
-  labs(title = "", x = "Day of Year", y = "Mean NEE", color = "") +
+  labs(title = "", x = "", y = "NEE (µmolCO2 m-2 s-1)", color = "") +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
   theme_minimal()
 
+arr_plots = ggarrange(plot_GPP, plot_NEE, ncol = 2, common.legend = TRUE, legend = "right")
+arr_plots <- ggdraw() +
+  draw_plot(arr_plots, width = 1, height = 1) +
+  draw_text("Average Annual GPP and NEE", x = 0.5, y = 0.96, hjust = 0.5, vjust = 0)+
+  draw_text("Day of Year", x = 0.5, y = 0.015, hjust = 0.5, vjust = 0, size = 10)
+print(arr_plots)
 
 #===============================================================================
 #Checking for WD frequency during DOY
