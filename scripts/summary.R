@@ -151,12 +151,16 @@ hm_dif <- hm_A_mean-hm_B_mean
 #===============================================================================
 #reformatting 30m TWI 
 tm_TWI = raster('TWI/TWI_veg_reg/30m_TWI_aligned.tif')
+ffp_shp = readOGR(dsn = 'data/summary_R_files/ffp_shp.gpkg')
 
 #reproject into wgs84 lat long
-wgs_84= "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+wgs_84 = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 ffp_shp_wgs = spTransform(x = ffp_shp, CRSobj = wgs_84)
-plot(tm_TWI, xaxt = "n", yaxt = "n", col=colorRampPalette(c("maroon", "red", "pink", "lightblue", "blue", "darkblue"))(500), )
+
+color_scale <- scale_color_manual(values = c("maroon" = "Dry", "darkblue" = "Wet"))
+plot(tm_TWI, axes = FALSE, box = FALSE, col = colorRampPalette(c("maroon", "red", "pink", "lightblue", "blue", "darkblue"))(500))
 plot(ffp_shp_wgs, lwd = 3, bg = "transparent", add = TRUE)
+
 
 
 #===============================================================================
@@ -215,12 +219,21 @@ plot(sum_table)
 #reformatting graphs 
 #rap = stack('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/Land_Cover/FFP_RAP_VegCover_2017.tif')
 rap = stack('Land_Cover/FFP_RAP_VegCover_2017.tif')
-
-#plotting RAP data with footprint shp 
-plot(rap)
 ffp_shp = readShapeSpatial("TWI/30_TWI/twi_ffp_sec.shp")
-plot(ffp_shp, bg = "transparent", add = TRUE)
 
+title = c("Annual Forbs and Grasses", "Bare Ground ", "Litter", "Perennial Forbs and Grasses", "Shrubs", "Trees")
+
+par(mfrow = c(2,3))
+#plotting RAP data with footprint shp 
+for (ii in 1:nlayers(rap)){
+  plot(subset(rap,ii), main=title[ii], axes = FALSE, box = FALSE)
+  plot(ffp_shp, add=TRUE)
+}
+
+
+
+
+#summary cover------------------------------------------------------------------
 
 rap.major.pft.map = function(rap) {
   
