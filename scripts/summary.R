@@ -251,14 +251,53 @@ par(mfrow = c(1,1))
 dat_A_arr = dat_voi_A %>% arrange(doy)
 dat_B_arr = dat_voi_B %>% arrange(doy)
 
-dat_A_arr$movavg_A = rollmean(dat_A_arr$gpp, k = 500, fill = NA)
-dat_B_arr$movavg_B = rollmean(dat_B_arr$gpp, k = 500, fill = NA)
+dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 500, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 500, fill = NA)
+
+
+dat_A_arr <- dat_A_arr %>%
+  group_by(doy) %>%
+  summarize(mean_gpp = mean(GPP), 
+            se_gpp = sd(GPP) / sqrt(n())) %>%
+  ungroup()
+
+dat_B_arr <- dat_B_arr %>%
+  group_by(doy) %>%
+  summarize(mean_gpp = mean(GPP), 
+            se_gpp = sd(GPP) / sqrt(n())) %>%
+  ungroup()
 
 ggplot() +
   geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
   geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
-  labs(title = "Moving Avg", x = "DOY", y = "GPP", color = "Data Source") +
-  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red"))+
+  #geom_ribbon(data = dat_A_arr, aes(x = doy, ymin = mean_gpp - se_gpp, ymax = mean_gpp + se_gpp), fill = "blue", alpha = 0.5) +
+  #geom_ribbon(data = dat_B_arr, aes(x = doy, ymin = mean_gpp - se_gpp, ymax = mean_gpp + se_gpp), fill = "red", alpha = 0.5) +
+  labs(title = "Moving Avg", x = "Day of Year", y = "Mean GPP", color = "") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
+  theme_minimal()
+#------------------------------
+#NEE mov avg
+dat_A_arr = dat_voi_A %>% arrange(doy)
+dat_B_arr = dat_voi_B %>% arrange(doy)
+
+dat_A_arr$movavg_A_NEE = rollmean(dat_A_arr$NEE, k = 500, fill = NA)
+dat_B_arr$movavg_B_NEE = rollmean(dat_B_arr$NEE, k = 500, fill = NA)
+
+dat_A_arr$mean_NEE <- mean(dat_A_arr$NEE, na.rm = TRUE) 
+sample_size <- nrow(dat_A_arr)
+dat_A_arr$se_NEE <- sd(dat_A_arr$NEE, na.rm = TRUE) / sqrt(sample_size)
+
+dat_B_arr$mean_NEE <- mean(dat_B_arr$NEE, na.rm = TRUE) 
+sample_size <- nrow(dat_B_arr)
+dat_B_arr$se_NEE <- sd(dat_B_arr$NEE, na.rm = TRUE) / sqrt(sample_size)
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A_NEE, color = "Northwestern WD")) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B_NEE, color = "Southeastern WD")) +
+  geom_ribbon(data = dat_A_arr, aes(x = doy, ymin = mean_NEE - se_NEE, ymax = mean_NEE + se_NEE), fill = "blue", alpha = 0.1) +
+  geom_ribbon(data = dat_B_arr, aes(x = doy, ymin = mean_NEE - se_NEE, ymax = mean_NEE + se_NEE), fill = "red", alpha = 0.1) +
+  labs(title = "Moving Avg", x = "Day of Year", y = "Mean NEE", color = "") +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
   theme_minimal()
 
 #===============================================================================
