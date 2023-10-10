@@ -77,6 +77,14 @@ dat_voi_A <- dat_voi%>%
 dat_voi_B <- dat_voi%>%
   filter(wind_dir >= 90 & wind_dir <= 170)%>%
   filter(doy %in% c(0:100, 330:366))
+#subsetting to premonsoon (only tree activity)
+dat_voi_A_pre = dat_voi %>%
+  filter(wind_dir >= 270 & wind_dir <= 350) %>%
+  filter(doy >= 145 & doy <= 190)
+dat_voi_B_pre = dat_voi %>%
+  filter(wind_dir >= 90 & wind_dir <= 170) %>%
+  filter(doy >= 145 & doy <= 190)
+
 
 #looping over vars to find means for either direction
 vars = c("WS", "VPD", "TA", "RH", "PPFD", "GPP", "RECO", "NEE")
@@ -139,6 +147,16 @@ masked_TWI_B = mask(x = hm_TWI, mask = B_shp)
 hm_A_mean <- mean(masked_TWI_A[], na.rm = TRUE)
 hm_B_mean <- mean(masked_TWI_B[], na.rm = TRUE)
 hm_dif <- hm_A_mean-hm_B_mean
+#===============================================================================
+#reformatting 30m TWI 
+tm_TWI = raster('TWI/TWI_veg_reg/30m_TWI_aligned.tif')
+
+#reproject into wgs84 lat long
+wgs_84= "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+ffp_shp_wgs = spTransform(x = ffp_shp, CRSobj = wgs_84)
+plot(tm_TWI, xaxt = "n", yaxt = "n", col=colorRampPalette(c("maroon", "red", "pink", "lightblue", "blue", "darkblue"))(500), )
+plot(ffp_shp_wgs, lwd = 3, bg = "transparent", add = TRUE)
+
 
 #===============================================================================
 #Finding mean TWI value and PFT values from rasters clipped by
@@ -194,7 +212,14 @@ plot(sum_table)
 
 #===============================================================================
 #reformatting graphs 
-rap = stack('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/Land_Cover/FFP_RAP_VegCover_2017.tif')
+#rap = stack('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/Land_Cover/FFP_RAP_VegCover_2017.tif')
+rap = stack('Land_Cover/FFP_RAP_VegCover_2017.tif')
+
+#plotting RAP data with footprint shp 
+plot(rap)
+ffp_shp = readShapeSpatial("TWI/30_TWI/twi_ffp_sec.shp")
+plot(ffp_shp, bg = "transparent", add = TRUE)
+
 
 rap.major.pft.map = function(rap) {
   
@@ -247,31 +272,20 @@ dat_voi_A <- dat_voi%>%
 dat_voi_B <- dat_voi%>%
   filter(wind_dir >= 90 & wind_dir <= 170)
 
-par(mfrow = c(1,1))
+#par(mfrow = c(1,1))
 dat_A_arr = dat_voi_A %>% arrange(doy)
 dat_B_arr = dat_voi_B %>% arrange(doy)
 
 dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 500, fill = NA)
 dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 500, fill = NA)
 
-
-dat_A_arr <- dat_A_arr %>%
-  group_by(doy) %>%
-  summarize(mean_gpp = mean(GPP), 
-            se_gpp = sd(GPP) / sqrt(n())) %>%
-  ungroup()
-
-dat_B_arr <- dat_B_arr %>%
-  group_by(doy) %>%
-  summarize(mean_gpp = mean(GPP), 
-            se_gpp = sd(GPP) / sqrt(n())) %>%
-  ungroup()
-
 ggplot() +
   geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
   geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
-  #geom_ribbon(data = dat_A_arr, aes(x = doy, ymin = mean_gpp - se_gpp, ymax = mean_gpp + se_gpp), fill = "blue", alpha = 0.5) +
-  #geom_ribbon(data = dat_B_arr, aes(x = doy, ymin = mean_gpp - se_gpp, ymax = mean_gpp + se_gpp), fill = "red", alpha = 0.5) +
+  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=265, xmax=290, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=325, xmax=366, ymin=0, ymax=18, alpha=.05, fill='red')+
   labs(title = "Moving Avg", x = "Day of Year", y = "Mean GPP", color = "") +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
   theme_minimal()
@@ -283,22 +297,17 @@ dat_B_arr = dat_voi_B %>% arrange(doy)
 dat_A_arr$movavg_A_NEE = rollmean(dat_A_arr$NEE, k = 500, fill = NA)
 dat_B_arr$movavg_B_NEE = rollmean(dat_B_arr$NEE, k = 500, fill = NA)
 
-dat_A_arr$mean_NEE <- mean(dat_A_arr$NEE, na.rm = TRUE) 
-sample_size <- nrow(dat_A_arr)
-dat_A_arr$se_NEE <- sd(dat_A_arr$NEE, na.rm = TRUE) / sqrt(sample_size)
-
-dat_B_arr$mean_NEE <- mean(dat_B_arr$NEE, na.rm = TRUE) 
-sample_size <- nrow(dat_B_arr)
-dat_B_arr$se_NEE <- sd(dat_B_arr$NEE, na.rm = TRUE) / sqrt(sample_size)
-
 ggplot() +
   geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A_NEE, color = "Northwestern WD")) +
   geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B_NEE, color = "Southeastern WD")) +
-  geom_ribbon(data = dat_A_arr, aes(x = doy, ymin = mean_NEE - se_NEE, ymax = mean_NEE + se_NEE), fill = "blue", alpha = 0.1) +
-  geom_ribbon(data = dat_B_arr, aes(x = doy, ymin = mean_NEE - se_NEE, ymax = mean_NEE + se_NEE), fill = "red", alpha = 0.1) +
-  labs(title = "Moving Avg", x = "Day of Year", y = "Mean NEE", color = "") +
+  annotate('rect', xmin=0, xmax=100, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
+  annotate('rect', xmin=145, xmax=190, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
+  annotate('rect', xmin=265, xmax=290, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
+  annotate('rect', xmin=325, xmax=366, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
+  labs(title = "", x = "Day of Year", y = "Mean NEE", color = "") +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
   theme_minimal()
+
 
 #===============================================================================
 #Checking for WD frequency during DOY
