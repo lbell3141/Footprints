@@ -18,6 +18,7 @@ library(rgdal)
 library(maptools)
 library(leaflet)
 library(ggpubr)
+library(grid)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -69,7 +70,7 @@ dat_voi = dat_file %>%
   filter(HH_UTC >= 8 & HH_UTC <= 17)%>%
   filter(lag(precip) == 0, lead(precip) == 0)%>%
   filter(precip == 0)
-
+#WD Tables===============================================================================
 #subset main data into frames NW ad SE directions
 #also subsetting to times of greatest flux difference (winter)
 dat_voi_A <- dat_voi%>%
@@ -79,13 +80,19 @@ dat_voi_B <- dat_voi%>%
   filter(wind_dir >= 90 & wind_dir <= 170)%>%
   filter(doy %in% c(0:100, 330:366))
 #subsetting to premonsoon (only tree activity)
-dat_voi_A_pre = dat_voi %>%
+dat_voi_A = dat_voi %>%
   filter(wind_dir >= 270 & wind_dir <= 350) %>%
   filter(doy >= 145 & doy <= 190)
-dat_voi_B_pre = dat_voi %>%
+dat_voi_B = dat_voi %>%
   filter(wind_dir >= 90 & wind_dir <= 170) %>%
   filter(doy >= 145 & doy <= 190)
-
+#subsetting to postmonsoon 
+dat_voi_A = dat_voi %>%
+  filter(wind_dir >= 270 & wind_dir <= 350) %>%
+  filter(doy >= 265 & doy <= 290)
+dat_voi_B = dat_voi %>%
+  filter(wind_dir >= 90 & wind_dir <= 170) %>%
+  filter(doy >= 265 & doy <= 290)
 
 #looping over vars to find means for either direction
 vars = c("WS", "VPD", "TA", "RH", "PPFD", "GPP", "RECO", "NEE")
@@ -111,7 +118,28 @@ sum_df <- merge(df_means_A, df_means_B, by = "Variable")
 #finding difference of means
 sum_df$Difference <- sum_df$Mean_NW - sum_df$Mean_SE
 
-#===============================================================================
+#reformatting values
+sum_df$Mean_NW <- format(sum_df$Mean_NW, scientific = FALSE)
+sum_df$Mean_SE <- format(sum_df$Mean_SE, scientific = FALSE)
+sum_df$Difference <- format(sum_df$Difference, scientific = FALSE)
+
+#formatting summary table
+#reorder variables:
+var_order <- c("PPFD", "RH", "TA", "VPD", "WS", "RECO", "GPP", "NEE")
+sum_df$Variable <- factor(sum_df$Variable, levels = var_order)
+sum_df <- sum_df %>% arrange(Variable)
+par(oma = c(0, 0, 0, 0)) 
+sum_table <- tableGrob(sum_df)
+plot(sum_table)
+
+colnames(sum_df) <- c("Flux", "Northwest Average", "Southeast Average", "Difference")
+sum_table <- tableGrob(sum_df)
+title <- textGrob("Pre-monsoon Avergae Flux Differences", gp=gpar(fontsize=12, fontface="bold"))
+arranged_table <- grid.arrange(title, sum_table, ncol = 1)
+
+# Draw the arrangement
+grid.draw(arranged_table)
+#PDF===============================================================================
 #making a PDF for wind direction 
 ggplot(dat_voi, aes(x = wind_dir)) +
   geom_density(alpha = 0.2, fill = "green") +
@@ -133,7 +161,7 @@ dat_voi_B <- dat_voi%>%
   GPP_total_B <- sum(dat_voi_B$GPP, na.rm = TRUE)
   GPP_contr_B <- (GPP_total_B/GPP_total)*100
 
-#===============================================================================
+#hm TWI===============================================================================
 #mask twi using half meter data to compare. mask with shapefile for 0.5m res 
 
 hm_TWI = raster('data/summary_R_files/0.5_TWI.tif')
@@ -158,10 +186,30 @@ wgs_84 = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 ffp_shp_wgs = spTransform(x = ffp_shp, CRSobj = wgs_84)
 
 color_scale <- scale_color_manual(values = c("maroon" = "Dry", "darkblue" = "Wet"))
-plot(tm_TWI, axes = FALSE, box = FALSE, col = colorRampPalette(c("maroon", "red", "pink", "lightblue", "blue", "darkblue"))(500))
+#plot(tm_TWI, axes = FALSE, box = FALSE, col = colorRampPalette(c("maroon", "red", "pink", "lightblue", "blue", "darkblue"))(500))
+plot(tm_TWI, axes = FALSE, box = FALSE, col = colorRampPalette(c("maroon","tomato", "pink", "lightblue","royalblue", "darkblue"))(500))
+
 plot(ffp_shp_wgs, lwd = 3, bg = "transparent", add = TRUE)
 
+b = seq(3,14,1)
+b.labs = c('Dry',rep('',10),'Wet')
 
+par(mar = c(1,1,2,0))
+plot(tm_TWI, 
+     main = "Topographic Wetness Index",
+     legend = FALSE,
+     axes = FALSE, 
+     box = FALSE, 
+     col = colorRampPalette(c("maroon","tomato", "pink", "lightblue","royalblue", "darkblue"))(11))
+plot(ffp_shp_wgs, lwd = 3, bg = "transparent", add = TRUE)
+plot(tm_TWI,
+     col = colorRampPalette(c("maroon","tomato", "pink", "lightblue","royalblue", "darkblue"))(11),
+     legend.only = TRUE,
+     legend.shrink = 1,
+     legend.width = 3,
+     legend.ticks = FALSE,
+     breaks = b,
+     lab.breaks = b.labs)
 
 #===============================================================================
 #Finding mean TWI value and PFT values from rasters clipped by
@@ -224,14 +272,16 @@ ffp_shp = readShapeSpatial("TWI/30_TWI/twi_ffp_sec.shp")
 title = c("Annual Forbs and Grasses", "Bare Ground ", "Litter", "Perennial Forbs and Grasses", "Shrubs", "Trees")
 
 par(mfrow = c(2,3))
+par(mfrow = c(2, 3))
+par(oma = c(0, 0, 0, 0))  
+par(mar = c(2, 1, 1, 1))  
+par(tcl = 1)
+
 #plotting RAP data with footprint shp 
 for (ii in 1:nlayers(rap)){
   plot(subset(rap,ii), main=title[ii], axes = FALSE, box = FALSE)
   plot(ffp_shp, add=TRUE)
 }
-
-
-
 
 #summary cover------------------------------------------------------------------
 
@@ -446,5 +496,54 @@ for (vars in drv_var) {
   
   legend("topright", legend = c("Northwestern WD", "Southeastern WD"), col = c("blue", "red"), pch = 19, cex = 0.7)
 }
+#===============================================================================
+#CJD RAP function
 
+# Open files
+files = list.files('C:/Users/lindseybell/OneDrive - University of Arizona/Desktop/Spatial_Regression', full.names = TRUE)
+twi.original = raster(files[1])
+rap.original = stack(files[2])
+
+# Reproject RAP to match TWI coordinate reference system/gridcell resolution using nearest neighbor pixel selection ("ngb")
+rap.reprojected = projectRaster(from = rap.original, to = twi.original, method = 'ngb')
+
+# Mask and trim TWI so that the total number of pixels matches RAP
+twi = trim(mask(twi.original, rap.reprojected[[1]]))
+
+# Trim reprojected RAP data (exludes all NA white space)
+rap = trim(rap.reprojected)
+
+# ~~~ Now RAP and TWI share the same spatial extent, coordinate reference, and grid dimensions (number of rows + columns)
+
+# Create vector containing names of RAP vegetation functional classes
+rap.functional.classes = c('AFG','BGR','LTR','PFG','SHR','TRE')
+
+# Loop through each RAP layer, compute R and R2, and generate scatterplots
+par(mfrow = c(2,3),
+    oma = c(0,0,0,0),
+    mar = c(4,4,1,1))
+for (i in 1 : nlayers(rap)){
+  
+  functional.group = rap.functional.classes[i]
+  
+  rap.twi.lm = lm(values(rap[[i]]) ~ values(twi))
+  R2 = round(summary(rap.twi.lm)$r.squared, 3)
+  R = round(cor(x = values(twi), y = values(rap[[i]]), use = 'all.obs', method = 'pearson'),3)
+  
+  plot(x = values(twi),
+       y = values(rap[[i]]),
+       xlab = 'Topographic Water Index (TWI) [ ]',
+       ylab = 'RAP functional class [% cover per pixel]',
+       main = '',
+       pch = 19)
+  abline(rap.twi.lm, lty = 2, lwd = 2)
+  legend('topleft',
+         legend = c(paste('R:',R),
+                    paste('R2:',R2)),
+         bty = 'n', cex = 1.2)
+  legend('topright',
+         legend = functional.group,
+         cex = 1.8, col = 'red',
+         bty = 'n')
+}
 
