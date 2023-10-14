@@ -132,7 +132,7 @@ par(oma = c(0, 0, 0, 0))
 sum_table <- tableGrob(sum_df)
 plot(sum_table)
 
-colnames(sum_df) <- c("Flux", "Northwest Average", "Southeast Average", "Difference")
+colnames(sum_df) <- c("Flux", "Northwest Average", "Southeast Average", "Postmonsoon Difference")
 sum_table <- tableGrob(sum_df)
 title <- textGrob("Pre-monsoon Avergae Flux Differences", gp=gpar(fontsize=12, fontface="bold"))
 arranged_table <- grid.arrange(title, sum_table, ncol = 1)
@@ -176,7 +176,7 @@ masked_TWI_B = mask(x = hm_TWI, mask = B_shp)
 hm_A_mean <- mean(masked_TWI_A[], na.rm = TRUE)
 hm_B_mean <- mean(masked_TWI_B[], na.rm = TRUE)
 hm_dif <- hm_A_mean-hm_B_mean
-#===============================================================================
+#TWI reformat===============================================================================
 #reformatting 30m TWI 
 tm_TWI = raster('TWI/TWI_veg_reg/30m_TWI_aligned.tif')
 ffp_shp = readOGR(dsn = 'data/summary_R_files/ffp_shp.gpkg')
@@ -269,7 +269,7 @@ plot(sum_table)
 rap = stack('Land_Cover/FFP_RAP_VegCover_2017.tif')
 ffp_shp = readShapeSpatial("TWI/30_TWI/twi_ffp_sec.shp")
 
-title = c("Annual Forbs and Grasses", "Bare Ground ", "Litter", "Perennial Forbs and Grasses", "Shrubs", "Trees")
+title = c("Annual Forbs and Grasses (AFG)", "Bare Ground (BGR)", "Litter (LTR)", "Perennial Forbs and Grasses (PFG)", "Shrubs (SHR)", "Trees (TRE)")
 
 par(mfrow = c(2,3))
 par(mfrow = c(2, 3))
@@ -279,7 +279,12 @@ par(tcl = 1)
 
 #plotting RAP data with footprint shp 
 for (ii in 1:nlayers(rap)){
-  plot(subset(rap,ii), main=title[ii], axes = FALSE, box = FALSE)
+  plot(subset(rap,ii), main=title[ii], axes = FALSE, box = FALSE, legend = FALSE, cex.main = 1.4)
+  plot(subset(rap,ii),
+       legend.only = TRUE,
+       legend.shrink = 1,
+       legend.width = 5,
+       legend.ticks = FALSE)
   plot(ffp_shp, add=TRUE)
 }
 
@@ -342,6 +347,19 @@ dat_B_arr = dat_voi_B %>% arrange(doy)
 dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 500, fill = NA)
 dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 500, fill = NA)
 
+
+plot_GPP <- ggplot() +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD"), size = 1.3) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD"), size = 1.3) +
+  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=265, xmax=290, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=325, xmax=366, ymin=0, ymax=18, alpha=.05, fill='red')+
+  labs(title = "", x = "", y = "GPP (µmolCO2 m-2 s-1)", color = "", size = 20) +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
+  theme_minimal()+
+  guides(color = FALSE)
+
 #NEE mov avg
 dat_A_arr = dat_voi_A %>% arrange(doy)
 dat_B_arr = dat_voi_B %>% arrange(doy)
@@ -349,34 +367,25 @@ dat_B_arr = dat_voi_B %>% arrange(doy)
 dat_A_arr$movavg_A_NEE = rollmean(dat_A_arr$NEE, k = 500, fill = NA)
 dat_B_arr$movavg_B_NEE = rollmean(dat_B_arr$NEE, k = 500, fill = NA)
 
-plot_GPP <- ggplot() +
-  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A, color = "Northwestern WD")) +
-  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B, color = "Southeastern WD")) +
-  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=18, alpha=.05, fill='red')+
-  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=18, alpha=.05, fill='red')+
-  annotate('rect', xmin=265, xmax=290, ymin=0, ymax=18, alpha=.05, fill='red')+
-  annotate('rect', xmin=325, xmax=366, ymin=0, ymax=18, alpha=.05, fill='red')+
-  labs(title = "", x = "", y = "GPP (µmolCO2 m-2 s-1)", color = "") +
-  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
-  theme_minimal()+
-  guides(color = FALSE)
-
 plot_NEE <- ggplot() +
-  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A_NEE, color = "Northwestern WD")) +
-  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B_NEE, color = "Southeastern WD")) +
+  geom_line(data = dat_A_arr, aes(x = doy, y = movavg_A_NEE, color = "Northwestern WD"), size = 1.3) +
+  geom_line(data = dat_B_arr, aes(x = doy, y = movavg_B_NEE, color = "Southeastern WD"), size = 1.3) +
   annotate('rect', xmin=0, xmax=100, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
   annotate('rect', xmin=145, xmax=190, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
   annotate('rect', xmin=265, xmax=290, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
   annotate('rect', xmin=325, xmax=366, ymin=-12, ymax=1.5, alpha=.05, fill='red')+
-  labs(title = "", x = "", y = "NEE (µmolCO2 m-2 s-1)", color = "") +
+  labs(title = "", x = "", y = "NEE (µmolCO2 m-2 s-1)", color = "", size = 30) +
   scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
   theme_minimal()
 
 arr_plots = ggarrange(plot_GPP, plot_NEE, ncol = 2, common.legend = TRUE, legend = "right")
 arr_plots <- ggdraw() +
   draw_plot(arr_plots, width = 1, height = 1) +
-  draw_text("Average Annual GPP and NEE", x = 0.5, y = 0.96, hjust = 0.5, vjust = 0)+
-  draw_text("Day of Year", x = 0.5, y = 0.015, hjust = 0.5, vjust = 0, size = 10)
+  draw_text("Average Annual GPP and NEE", x = 0.5, y = 0.96, hjust = 0.5, vjust = 0, size = 25)+
+  draw_text("Day of Year", x = 0.5, y = 0.015, hjust = 0.5, vjust = 0, size = 20)
+
+
+
 print(arr_plots)
 
 #===============================================================================
@@ -433,8 +442,8 @@ combined_data$Moving_Average_B <- rollapply(combined_data$Frequency_B, width = 1
 ggplot(combined_data, aes(x = doy)) +
   #geom_line(aes(y = Frequency_A, color = "NW"), alpha = 0.7) +
   #geom_line(aes(y = Frequency_B, color = "SE"), alpha = 0.7) +
-  geom_line(aes(y = Moving_Average_A, color = "NW Moving Avg"), alpha = 1) +
-  geom_line(aes(y = Moving_Average_B, color = "SE Moving Avg"), alpha = 1) +
+  geom_line(aes(y = Moving_Average_A, color = "NW Moving Avg"), alpha = 1, size = 1.4) +
+  geom_line(aes(y = Moving_Average_B, color = "SE Moving Avg"), alpha = 1, size = 1.4) +
   scale_color_manual(values = c("NW" = "lightblue", "SE" = "lightcoral", "NW Moving Avg" = "blue", "SE Moving Avg" = "red")) +
   annotate('rect', xmin=0, xmax=100, ymin=0, ymax=200, alpha=.05, fill='red')+
   annotate('rect', xmin=145, xmax=190, ymin=0, ymax=200, alpha=.05, fill='red')+
@@ -462,10 +471,11 @@ combined_data <- merge(wind_freq_A, wind_freq_B, by = "HH_UTC", all = TRUE)
 colnames(combined_data) <- c("HH_UTC", "Frequency_A", "Frequency_B")
 
 ggplot(combined_data, aes(x = HH_UTC)) +
-  geom_line(aes(y = Frequency_A, color = "NW"), alpha = 0.7) +
-  geom_line(aes(y = Frequency_B, color = "SE"), alpha = 0.7) +
-  geom_smooth(aes(y = Frequency_A, color = "NW"), method = "loess", se = FALSE) +
-  geom_smooth(aes(y = Frequency_B, color = "SE"), method = "loess", se = FALSE) +
+  geom_line(aes(y = Frequency_A, color = "NW"), size = 1.5) +
+  geom_line(aes(y = Frequency_B, color = "SE"), size = 1.5) +
+  #geom_smooth(aes(y = Frequency_A, color = "NW"), method = "loess", se = FALSE) +
+  #geom_smooth(aes(y = Frequency_B, color = "SE"), method = "loess", se = FALSE) +
+  scale_x_continuous(breaks = seq(min(combined_data$HH_UTC), max(combined_data$HH_UTC), by = 1)) +
   scale_color_manual(values = c("NW" = "blue", "SE" = "red")) +
   labs(x = "Time of Day (hr)", y = "Number of Observations", color = "Data Frame") +
   theme_minimal()
@@ -532,18 +542,20 @@ for (i in 1 : nlayers(rap)){
   
   plot(x = values(twi),
        y = values(rap[[i]]),
-       xlab = 'Topographic Water Index (TWI) [ ]',
-       ylab = 'RAP functional class [% cover per pixel]',
+       #xlab = 'Topographic Water Index (TWI) [ ]',
+       #ylab = 'RAP functional class [% cover per pixel]',
+       xlab = '',
+       ylab = '',
        main = '',
        pch = 19)
-  abline(rap.twi.lm, lty = 2, lwd = 2)
-  legend('topleft',
-         legend = c(paste('R:',R),
-                    paste('R2:',R2)),
-         bty = 'n', cex = 1.2)
-  legend('topright',
-         legend = functional.group,
-         cex = 1.8, col = 'red',
-         bty = 'n')
+  abline(rap.twi.lm, col = "navyblue", lty = 1, lwd = 3.5)
+  #legend('topleft',
+        # legend = c(paste('R:',R),
+                    #paste('R2:',R2)),
+        # bty = 'n', cex = 1.2)
+  #legend('topright',
+         #legend = functional.group,
+        # cex = 1.8, col = 'red',
+         #bty = 'n')
 }
 
