@@ -72,14 +72,14 @@ dat_ffp <- dat_file %>%
     test = zm/L
   ) %>%
   filter(test >= -15.5)%>%
-  filter(u_star > 0.1)%>%
+  filter(u_star > 0.25)%>%
   select(yyyy, mm, day, HH_UTC, MM, zm, d, z0, u_mean, L, sigma_v, u_star, wind_dir)%>%
   filter(across(everything(), ~ . != "NA"))%>%
   #filter(test >= -15.5)%>%
-  filter(HH_UTC %in% c(0:6, 20:24))%>%
+  filter(HH_UTC >= 8, HH_UTC <= 17)%>%
   #filter(mm >= 8, mm <= 10)%>%
   # filter(day == 5)%>%
-  filter(yyyy == 2017)
+  filter(yyyy >= 2018, yyyy <= 2021)
 
 dat_ffp$L = as.numeric(dat_ffp$L)
 dat_ffp$sigma_v = as.numeric(dat_ffp$sigma_v)

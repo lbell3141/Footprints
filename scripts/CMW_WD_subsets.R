@@ -11,6 +11,7 @@ library(plantecophys)
 devtools::install_github("cardiomoon/ggiraphExtra")
 library(gridExtra)
 library(tidyr)
+library(cowplot)
 
 dat_file <- read.csv("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
 dat_file <- read.csv("data/AMF_US-CMW_BASE_HH_2-5.csv", na.strings = "-9999", header = TRUE, sep = ",", skip = 2)
@@ -576,6 +577,61 @@ for (var in r_var){
 }
 
 grid.arrange(grobs = plots, ncol = 3)
+
+
+
+
+
+
+
+
+gpp_plots <- list()
+r_var_plots <- list()
+
+# Loop for GPP plots
+for (var in c_var) {
+  p <- ggplot() +
+    labs(x = "DOY", y = var, color = "Data Frame")
+  
+  for (i in 1:8) {
+    df <- dat_frames[[i]]
+    df_name <- i
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_point(data = df, aes_string(x = "doy", y = var, color = "df_name"))
+  }
+  gpp_plots[[var]] <- p
+}
+
+# Combine GPP plots
+combined_gpp <- plot_grid(plotlist = gpp_plots, ncol = 3)
+
+# Loop for other variable plots
+for (var in r_var) {
+  p <- ggplot() +
+    labs(x = var, y = "GPP", color = "Data Frame")
+  
+  for (i in 1:8) {
+    df <- dat_frames[[i]]
+    df_name <- i
+    df$df_name <- factor(df_name)
+    
+    p <- p + geom_point(data = df, aes_string(x = var, y = "gpp", color = "df_name"))
+  }
+  r_var_plots[[var]] <- p
+}
+
+# Combine other variable plots
+combined_r_var <- plot_grid(plotlist = r_var_plots, ncol = 3)
+
+# Arrange the combined plots
+final_plot <- plot_grid(combined_gpp, combined_r_var, ncol = 1)
+
+# Print or display the final plot
+print(final_plot)
+
+
+
 
 #===============================================================================
 #multiple regression

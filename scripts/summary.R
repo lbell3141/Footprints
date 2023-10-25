@@ -211,7 +211,7 @@ plot(tm_TWI,
      breaks = b,
      lab.breaks = b.labs)
 
-#===============================================================================
+#mean TWI PFT===============================================================================
 #Finding mean TWI value and PFT values from rasters clipped by
 #by wind direction in QGIS
 # _A = NW; _B = SE
@@ -263,7 +263,7 @@ sum_table <- tableGrob(sum_df)
 plot(sum_table)
 
 
-#===============================================================================
+#RAP reformat===============================================================================
 #reformatting graphs 
 #rap = stack('C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/Land_Cover/FFP_RAP_VegCover_2017.tif')
 rap = stack('Land_Cover/FFP_RAP_VegCover_2017.tif')
@@ -334,7 +334,7 @@ title("Dominant PFT per Footprint Pixel")
 legend("topright", legend = names(custom_palette[4:6]), fill = unname(custom_palette[4:6]))
 ffp_shp = readShapeSpatial("C:/Users/lindseybell/OneDrive - University of Arizona/Documents/Footprints/TWI/30_TWI/twi_ffp_sec.shp")
 plot(ffp_shp, bg = "transparent", add = TRUE)
-#===============================================================================
+#MA===============================================================================
 #fixing moving averages 
 dat_voi_A <- dat_voi%>%
   filter(wind_dir >= 270 & wind_dir <= 350)
@@ -558,4 +558,41 @@ for (i in 1 : nlayers(rap)){
         # cex = 1.8, col = 'red',
          #bty = 'n')
 }
+
+#===============================================================================
+#fixing moving averages 
+dat_voi_A <- dat_voi%>%
+  filter(wind_dir >= 270 & wind_dir <= 350)%>%
+  filter(yyyy == 2006)%>%
+  arrange(doy)%>%
+  mutate(wk = floor((doy - min(doy)) / 7)) %>%
+  group_by(wk) %>%
+  summarize(GPP = mean(GPP, na.rm  = TRUE))
+
+dat_voi_B <- dat_voi%>%
+  filter(wind_dir >= 90 & wind_dir <= 170)%>%
+  filter(yyyy == 2006)%>%
+  arrange(doy)%>%
+  mutate(wk = floor((doy - min(doy)) / 7)) %>%
+  group_by(wk) %>%
+  summarize(GPP = mean(GPP, na.rm  = TRUE))
+
+dat_A_arr = dat_voi_A %>% arrange(wk)
+dat_B_arr = dat_voi_B %>% arrange(wk)
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 7, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 7, fill = NA)
+
+
+ggplot() +
+  geom_line(data = dat_A_arr, aes(x = wk, y = GPP, color = "Northwestern WD"), size = 1.3) +
+  geom_line(data = dat_B_arr, aes(x = wk, y = GPP, color = "Southeastern WD"), size = 1.3) +
+  #annotate('rect', xmin=0, xmax=100, ymin=0, ymax=18, alpha=.05, fill='red')+
+  #annotate('rect', xmin=145, xmax=190, ymin=0, ymax=18, alpha=.05, fill='red')+
+  #annotate('rect', xmin=265, xmax=290, ymin=0, ymax=18, alpha=.05, fill='red')+
+  #annotate('rect', xmin=325, xmax=366, ymin=0, ymax=18, alpha=.05, fill='red')+
+  labs(title = "", x = "", y = "GPP (µmolCO2 m-2 s-1)", color = "", size = 20) +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
+  theme_minimal()+
+  guides(color = FALSE)
 
