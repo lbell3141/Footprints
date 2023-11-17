@@ -144,3 +144,79 @@ dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 500, fill = NA)
 dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 500, fill = NA)
 dat_gr_arr$movavg_gr = rollmean(dat_gr_arr$GPP, k = 500, fill = NA)
 
+#Standardize====================================================================
+A_zs <- scale(obs_pre$A)
+B_zs <- scale(obs_pre$B)
+gr_zs <- scale(obs_pre$gr)
+
+z_score_df <- data.frame(A_zs, B_zs, gr_zs)
+
+
+ggplot(z_score_df, aes(x = A_zs, y = gr_zs, color = "A_zs")) +
+  geom_point(size = 3, alpha = 0.15) +
+  scale_color_manual(values = c(A_zs = "blue")) +
+  labs(x = "GPP A", y = "GPP gr", title = "Comparison of GPP") +
+  geom_smooth(aes(x = A_zs, y = gr_zs), method = "lm", se = FALSE, linetype = "solid", color = "blue") +
+  geom_point(aes(x = B_zs, y = gr_zs, color = "B_zs"), size = 3, alpha = 0.15, color = "red") +
+  geom_smooth(aes(x = B_zs, y = gr_zs), method = "lm", se = FALSE, linetype = "solid", color = "red") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "darkgray", size = 1.3) +
+  labs(x = "US-CMW GPP", y = "US-LS1 GPP", title = "Comparison of GPP of CMW Wind Directions with Grassland") +
+  theme_minimal()
+
+#log transform=================================================================
+obs_pre$log_A <- log(obs_pre$A + 1e-10)
+obs_pre$log_B <- log(obs_pre$B + 1e-10)
+obs_pre$log_gr <- log(obs_pre$gr + 1e-10)
+
+obs_pre_filtered <- na.omit(obs_pre)
+obs_pre_filtered <- obs_pre_filtered[-41, ]
+
+log_A_zs <- scale(obs_pre_filtered$log_A)
+log_B_zs <- scale(obs_pre_filtered$log_B)
+log_gr_zs <- scale(obs_pre_filtered$log_gr)
+log_z_score_df <- data.frame(log_A_zs, log_B_zs, log_gr_zs)
+
+#===================================
+  # Fit log-log regression model
+model <- lm(log_gr_zs ~ log_A_zs, data = log_z_score_df)
+
+# Extract coefficients
+slope <- coef(model)[2]
+intercept <- coef(model)[1]
+
+# Predict log(GPPls) using the log-log regression equation
+log_GPPls_pred <- predict(model, newdata = log_z_score_df)
+
+# Plot the log-transformed data with log-log regression line
+ggplot(log_z_score_df, aes(x = log_A_zs, y = log_gr_zs, color = "log_A_zs")) +
+  geom_point(size = 3, alpha = 0.15) +
+  scale_color_manual(values = c(log_A_zs = "blue")) +
+  labs(x = "Log(GPP A)", y = "Log(GPP gr)", title = "Log-Log Regression of GPP") +
+  geom_smooth(aes(x = log_A_zs, y = log_GPPls_pred), se = FALSE, linetype = "solid", color = "blue") +
+  labs(x = "Log(US-CMW GPP)", y = "Log(US-LS1 GPP)", title = "Comparison of Log-transformed GPP of CMW Wind Directions with Grassland") +
+  theme_minimal()
+
+
+
+#---------
+ggplot(log_z_score_df, aes(x = log_A_zs, y = log_gr_zs, color = "log_A_zs")) +
+  geom_point(size = 3, alpha = 0.15) +
+  scale_color_manual(values = c(log_A_zs = "blue")) +
+  labs(x = "Log(GPP A)", y = "Log(GPP gr)", title = "Comparison of Log-transformed GPP") +
+  #geom_smooth(aes(x = log_A_zs, y = log_gr_zs), method = "glm", se = FALSE, linetype = "solid", color = "blue") +
+  geom_point(aes(x = log_B_zs, y = log_gr_zs, color = "log_B_zs"), size = 3, alpha = 0.15, color = "red") +
+  #geom_smooth(aes(x = log_B_zs, y = log_gr_zs), method = "glm", se = FALSE, linetype = "solid", color = "red") +
+  #geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "darkgray", size = 1.3) +
+  labs(x = "Log(US-CMW GPP)", y = "Log(US-LS1 GPP)", title = "Comparison of Log-transformed GPP of CMW Wind Directions with Grassland") +
+  theme_minimal()
+
+
+ggplot(log_z_score_df, aes(x = log_A_zs, y = log_gr_zs))+
+  geom_point(size = 3, alpha = 0.15)+
+  geom_smooth(aes(z = log_A_zs, y = log_gr_zs), method = "lm", formula = y~log(x))
+
+fit <- lm(log_z_score_df$log_gr_zs ~ log(log_z_score_df$log_A_zs))
+x=seq(from=1,to=n,length.out=1000)
+y=predict(fit,newdata=list(x=seq(from=1,to=n,length.out=1000)),
+            +           interval="confidence")
+matlines(x,y,lwd=2)
