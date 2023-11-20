@@ -106,18 +106,21 @@ gr_voi = gr_data %>%
   filter(precip == 0)
 
 #plotting=======================================================================
-dat_A_arr = dat_voi_A %>% 
-  arrange(doy)%>%
-  group_by(doy)%>%
-  summarise(across(everything(), mean, na.rm = TRUE))%>%
+dat_A_arr <- dat_voi_A %>% 
+  arrange(doy) %>%
+  filter(doy >= 125, doy <= 185) %>%
+  group_by(doy) %>%
+  summarise(across(everything(), mean, na.rm = TRUE)) %>%
   filter(GPP != -9999)
 dat_B_arr = dat_voi_B %>% 
   arrange(doy)%>%
+  filter(doy >= 125, doy <= 185) %>%
   group_by(doy)%>%
   summarise(across(everything(), mean, na.rm = TRUE))%>%
   filter(GPP != -9999)
 dat_gr_arr = gr_voi %>% 
   arrange(doy)%>%
+  filter(doy >= 125, doy <= 185) %>%
   group_by(doy)%>%
   summarise(across(everything(), mean, na.rm = TRUE))%>%
   filter(GPP != -9999)
@@ -191,10 +194,14 @@ log_GPPls_pred <- predict(model, newdata = log_z_score_df)
 ggplot(log_z_score_df, aes(x = log_A_zs, y = log_gr_zs, color = "log_A_zs")) +
   geom_point(size = 3, alpha = 0.15) +
   scale_color_manual(values = c(log_A_zs = "blue")) +
-  labs(x = "Log(GPP A)", y = "Log(GPP gr)", title = "Log-Log Regression of GPP") +
-  geom_smooth(aes(x = log_A_zs, y = log_GPPls_pred), se = FALSE, linetype = "solid", color = "blue") +
+  labs(x = "Log(GPP A)", y = "Log(GPP gr)", title = "Comparison of Log-transformed GPP") +
+  geom_smooth(aes(x = log_A_zs, y = log_gr_zs, group = "log_A_zs"), method = "lm", se = FALSE, linetype = "solid", color = "blue") +
+  geom_point(aes(x = log_B_zs, y = log_gr_zs, color = "log_B_zs"), size = 3, alpha = 0.15, color = "red") +
+  geom_smooth(aes(x = log_B_zs, y = log_gr_zs, group = "log_B_zs"), method = "lm", se = FALSE, linetype = "solid", color = "red") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "darkgray", size = 1.3) +  # 1:1 line
   labs(x = "Log(US-CMW GPP)", y = "Log(US-LS1 GPP)", title = "Comparison of Log-transformed GPP of CMW Wind Directions with Grassland") +
   theme_minimal()
+
 
 
 
@@ -220,3 +227,72 @@ x=seq(from=1,to=n,length.out=1000)
 y=predict(fit,newdata=list(x=seq(from=1,to=n,length.out=1000)),
             +           interval="confidence")
 matlines(x,y,lwd=2)
+
+
+
+
+
+obs_pre = data.frame(
+  A = dat_A_arr$GPP,
+  B = dat_B_arr$GPP,
+  gr = dat_gr_arr$GPP,
+  DOY = dat_A_arr$doy
+)
+
+
+plot_GPP <- ggplot() +
+  geom_line(data = obs_pre, aes(x = DOY, y = A, color = "Northwestern WD")) +
+  geom_line(data = obs_pre, aes(x = DOY, y = B, color = "Southeastern WD")) +
+  annotate('rect', xmin=0, xmax=100, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=145, xmax=190, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=265, xmax=290, ymin=0, ymax=18, alpha=.05, fill='red')+
+  annotate('rect', xmin=325, xmax=366, ymin=0, ymax=18, alpha=.05, fill='red')+
+  labs(title = "", x = "", y = "GPP (µmolCO2 m-2 s-1)", color = "", size = 20) +
+  scale_color_manual(values = c("Northwestern WD" = "blue", "Southeastern WD" = "red")) +
+  theme_minimal()+
+  guides(color = FALSE)
+plot_GPP
+
+
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 500, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 500, fill = NA)
+dat_gr_arr$movavg_gr = rollmean(dat_gr_arr$GPP, k = 500, fill = NA)
+
+
+dat_A_arr <- dat_voi_A %>% 
+  arrange(doy) %>%
+  filter(doy >= 125, doy <= 185) %>%
+  group_by(doy) %>%
+  summarise(across(everything(), mean, na.rm = TRUE)) %>%
+  filter(GPP != -9999)
+dat_B_arr = dat_voi_B %>% 
+  arrange(doy)%>%
+  filter(doy >= 125, doy <= 185) %>%
+  group_by(doy)%>%
+  summarise(across(everything(), mean, na.rm = TRUE))%>%
+  filter(GPP != -9999)
+dat_gr_arr = gr_voi %>% 
+  arrange(doy)%>%
+  filter(doy >= 125, doy <= 185) %>%
+  group_by(doy)%>%
+  summarise(across(everything(), mean, na.rm = TRUE))%>%
+  filter(GPP != -9999)
+
+dat_A_arr <- dat_voi_A %>% 
+  arrange(doy)
+dat_B_arr = dat_voi_B %>% 
+  arrange(doy)
+dat_gr_arr = gr_voi %>% 
+  arrange(doy)
+
+dat_A_arr$movavg_A = rollmean(dat_A_arr$GPP, k = 500, fill = NA)
+dat_B_arr$movavg_B = rollmean(dat_B_arr$GPP, k = 500, fill = NA)
+dat_gr_arr$movavg_gr = rollmean(dat_gr_arr$GPP, k = 500, fill = NA)
+
+
+obs_pre = data.frame(
+  A = dat_A_arr$GPP,
+  B = dat_B_arr$GPP,
+  gr = dat_gr_arr$GPP
+)
